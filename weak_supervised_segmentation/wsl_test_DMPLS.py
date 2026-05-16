@@ -98,7 +98,7 @@ class Tester(Trainer):
         columns.append("VC")
 
 
-        formatted_data = [f"{mean}$\pm${std}" for mean, std in zip(mean_data, std_data)]
+        formatted_data = [f"{mean}$\pm${std}" for mean, std in zip(mean_data, std_data)] # type: ignore
 
         # 创建一个字典，用于构造DataFrame
         data_dict = {col: [val] for col, val in zip(columns, formatted_data)}

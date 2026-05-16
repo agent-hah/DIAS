@@ -1,5 +1,5 @@
 import numpy as np
-from batchgenerators.utilities.file_and_folder_operations import *
+from batchgenerators.utilities.file_and_folder_operations import os
 import torch
 from torch.utils.data import Dataset
 from utils.data_augmentation import Compose, ToTensor, CropToFixed, HorizontalFlip, VerticalFlip, RandomRotate90, GaussianBlur3D, RandomContrast, AdditiveGaussianNoise
