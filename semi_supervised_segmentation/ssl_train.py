@@ -9,7 +9,7 @@ import argparse
 from loguru import logger
 from data import build_train_single_loader, build_train_all_loader, build_val_loader, build_inference_loader
 from ssl_trainer import SSL_Trainer
-from utils.helpers import seed_torch
+from utils.helpers import seed_torch, target_device
 from losses.losses import DC_and_CE_loss
 from datetime import datetime
 import wandb
@@ -68,7 +68,15 @@ def main(config):
 def main_worker(local_rank, config):
 
     np.set_printoptions(formatter={'float': '{: 0.4f}'.format}, suppress=True)
-    torch.cuda.set_device(local_rank)
+
+    device = target_device
+
+    if local_rank == 0:
+        logger.info(f'Using device: {device}')
+
+    if device.type == 'cuda':
+        torch.cuda.set_device(local_rank)
+
     if config.DIS:
         dist.init_process_group(
             "nccl", init_method='env://', rank=local_rank, world_size=config.WORLD_SIZE)
@@ -92,6 +100,8 @@ def main_worker(local_rank, config):
         config.freeze()
         wandb.init(project=config.WANDB.PROJECT, name=config.EXPERIMENT_ID,
                    config=config, mode=config.WANDB.MODE)
+    
+    
 
     tag = "ite_1_teacher"
     train_label_loader = build_train_single_loader(config)

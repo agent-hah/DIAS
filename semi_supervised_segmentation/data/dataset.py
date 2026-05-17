@@ -9,6 +9,9 @@ import numpy as np
 import sys
 sys.path.append("..")
 
+cv2.setNumThreads(0)
+
+VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
 
 class label_dataset(Dataset):
     def __init__(self, config, images_path, labels_path):
@@ -43,11 +46,17 @@ class label_dataset(Dataset):
         images = []
         gts = []
         for i in range(len(label_files)):
+            if (images_path == VAL_IMAGE_PATH):
+                i = i + 30
             image_each_slice = []
             for j in range(8):
                 img = cv2.imread(os.path.join(
                     images_path, f"image_s{i}_i{j}.png"), 0)
-                image_each_slice.append(img)
+                if img is not None:
+                    image_each_slice.append(img)
+                else:
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
+            
             seq = np.array(image_each_slice)
             mn = seq.mean()
             std = seq.std()
@@ -220,7 +229,10 @@ class inference_dataset(test_dataset):
             for j in range(8):
                 img = cv2.imread(os.path.join(
                     images_path, f"image_s{i}_i{j}.png"), 0)
-                image_each_slice.append(img)
+                if img is not None:
+                    image_each_slice.append(img)
+                else:
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
             seq = np.array(image_each_slice)
             mn = seq.mean()
             std = seq.std()
