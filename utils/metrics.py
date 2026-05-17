@@ -48,11 +48,13 @@ def get_metrics(predict, target,run_clDice = False, threshold=0.5):
         auc = 1
     else:
         auc = roc_auc_score(target, predict)
+
+    epsilon = 1e-5
     acc = (tp + tn) / (tp + fp + fn + tn)
-    pre = tp / (tp + fp)
-    sen = tp / (tp + fn)
-    spe = tn / (tn + fp)
-    iou = tp / (tp + fp + fn)
+    pre = tp / (tp + fp + epsilon)
+    sen = tp / (tp + fn + epsilon)
+    spe = tn / (tn + fp + epsilon)
+    iou = tp / (tp + fp + fn + epsilon)
     DSC = 2 * pre * sen / (pre + sen)
     return {
         "DSC": np.round(DSC, 4),

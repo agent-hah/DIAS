@@ -6,8 +6,11 @@ from utils.data_augmentation import Compose, ToTensor, CropToFixed, HorizontalFl
 import cv2
 import torch.nn.functional as F
 from skimage.transform import resize
+import random
 
-VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
+cv2.setNumThreads(0)
+
+VAL_IMAGE_PATH = "/Users/ashmi/Projects/Lab/d_data/validation/images"
 
 
 class Train_dataset(Dataset):
@@ -50,7 +53,7 @@ class Train_dataset(Dataset):
                 if img is not None:
                     image_each_slice.append(img)
                 else:
-                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((512, 512), dtype=np.uint8))
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
 
             seq = np.array(image_each_slice)
             mn = seq.mean()
@@ -68,7 +71,7 @@ class Train_dataset(Dataset):
     def __getitem__(self, idx):
         # data_id = self.series_ids[idx]
         # torch.manual_seed(idx)
-        id = np.random.randint(len(self.images))
+        id = random.randint(0, len(self.images) - 1)
         img = self.images[id]
         gt = self.gts[id]
 
@@ -128,7 +131,7 @@ class PLC_Train_dataset(Dataset):
                 if img is not None:
                     image_each_slice.append(img)
                 else:
-                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((512, 512), dtype=np.uint8))
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
 
             seq = np.array(image_each_slice)
             mn = seq.mean()
@@ -144,7 +147,7 @@ class PLC_Train_dataset(Dataset):
         return images, gts
 
     def __getitem__(self, idx):
-        id = np.random.randint(len(self.images))
+        id = random.randint(0, len(self.images) - 1)
         img = self.images[id]
         gt = self.gts[id]
 
@@ -208,7 +211,7 @@ class Test_dataset(Dataset):
                 if img is not None:
                     image_each_slice.append(img)
                 else:
-                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((512, 512), dtype=np.uint8))
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
 
             seq = np.array(image_each_slice)
             mn = seq.mean()
