@@ -7,6 +7,11 @@ from torch.utils.data import Dataset
 from utils.data_augmentation import Compose, ToTensor, CropToFixed, HorizontalFlip, VerticalFlip, RandomRotate90
 import cv2
 import torch.nn.functional as F
+import random
+
+cv2.setNumThreads(0)
+
+VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
 
 
 class Train_dataset(Dataset):
@@ -36,7 +41,7 @@ class Train_dataset(Dataset):
         ])
 
     def __getitem__(self, idx):
-        id = np.random.randint(len(self.image_list))
+        id = random.randint(0, len(self.image_list) - 1)
         img_id = self.image_list[id]
         img =  np.load(os.path.join(self.images_path,img_id))
         gt = cv2.imread(os.path.join(
@@ -45,6 +50,7 @@ class Train_dataset(Dataset):
         # gt = np.load(os.path.join(self.labels_path,img_id))[np.newaxis]
         img = self.seq_DA(img)
         gt = self.gt_DA(gt)
+        
         return img, gt.long()
 
     def __len__(self):
@@ -68,18 +74,35 @@ class Test_dataset(Train_dataset):
         images = []
         gts = []
         for i in range(len(label_files)):
+            if (images_path == VAL_IMAGE_PATH):
+                i = i + 30
+            image_each_slice = []
+            for j in range(8):
+                img = cv2.imread(os.path.join(
+                    images_path, f"image_s{i}_i{j}.png"), 0)
+                if img is not None:
+                    image_each_slice.append(img)
+                else:
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
             
-            image = np.load(os.path.join(images_path,f"{i}.npy"))
-            images.append(image)
+            seq = np.array(image_each_slice)
+            mn = seq.mean()
+            std = seq.std()
+            seq = (seq - mn) / (std + 1e-8)
+            images.append(seq)
             
   
             gt = cv2.imread(os.path.join(
                 self.labels_path, f"label_s{i}.png"), 0)
-            gt = np.array(gt/255)[np.newaxis]
-            # gt = np.load(os.path.join(self.labels_path,f"{i}.npy"))[np.newaxis]
-            gts.append(gt)
+            if gt is None:
+                ValueError(f"Label file for image_s{i} not found in {self.labels_path}")
+            else:
+                gt = np.array(gt/255)[np.newaxis]
+                # gt = np.load(os.path.join(self.labels_path,f"{i}.npy"))[np.newaxis]
+                gts.append(gt)
 
         return images, gts
+    
     def get_patch(self, image_list, patch_size, stride):
         patch_list = []
         _, h, w = image_list[0].shape

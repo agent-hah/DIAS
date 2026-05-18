@@ -7,6 +7,7 @@ import torch
 from batchgenerators.utilities.file_and_folder_operations import *
 import numpy as np
 import sys
+import random 
 sys.path.append("..")
 
 cv2.setNumThreads(0)
@@ -65,8 +66,11 @@ class label_dataset(Dataset):
 
             gt = cv2.imread(os.path.join(
                 label_path, f"label_s{i}.png"), 0)
-            gt = np.array(gt/255)[np.newaxis]
-            gts.append(gt)
+            if gt is None:
+                ValueError(f"Label image for sample {i} not found at {os.path.join(label_path, f'label_s{i}.png')}")
+            else:
+                gt = np.array(gt/255)[np.newaxis]
+                gts.append(gt)
 
         return images, gts
 
@@ -147,16 +151,16 @@ class train_all_dataset(label_dataset):
 
     def __getitem__(self, idx):
 
-        if np.random.random() < 0.5:
+        if random.random() < 0.5:
 
-            id = np.random.randint(len(self.images))
+            id = random.randint(0, len(self.images) - 1)
             img = self.images[id]
             gt = self.gts[id]
             img = self.seq_DA(img)
             gt = self.gt_DA(gt)
 
         else:
-            id = np.random.randint(self.num_unlabel_images)
+            id = random.randint(0, self.num_unlabel_images - 1)
             img = self.pl_images[id]
             gt = self.pl_gts[id]
 
@@ -221,7 +225,7 @@ class inference_dataset(test_dataset):
         self.img_patch = self.get_patch(
             self.images, self.patch_size, self.stride)
 
-    def read_image(self, images_path):
+    def read_image(self, images_path): # type: ignore
         num_files = list(sorted(os.listdir(images_path)))
         images = []
         for i in range(len(num_files)//8):

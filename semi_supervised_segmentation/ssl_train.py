@@ -58,7 +58,7 @@ def parse_option():
 
 def main(config):
     if config.DIS:
-        mp.spawn(main_worker,
+        mp.spawn(main_worker, # type: ignore
                  args=(config,),
                  nprocs=config.WORLD_SIZE,)
     else:
@@ -101,7 +101,7 @@ def main_worker(local_rank, config):
         wandb.init(project=config.WANDB.PROJECT, name=config.EXPERIMENT_ID,
                    config=config, mode=config.WANDB.MODE)
     
-    
+
 
     tag = "ite_1_teacher"
     train_label_loader = build_train_single_loader(config)

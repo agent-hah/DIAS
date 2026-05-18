@@ -53,7 +53,7 @@ def parse_option():
 
 def main(config):
     if config.DIS:
-        mp.spawn(main_worker,
+        mp.spawn(main_worker, # type: ignore
                  args=(config,),
                  nprocs=config.WORLD_SIZE,)
     else:
