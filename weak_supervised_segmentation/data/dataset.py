@@ -46,6 +46,12 @@ class Train_dataset(Dataset):
         images = []
         gts = []
         for i in range(len(label_files)):
+            if (images_path.endswith("/validation/images")):
+                i = i + 30
+            elif (images_path.endswith("/test/images")):
+                i = i + 40
+            elif (images_path.endswith("/unlabeled_DSA")):
+                i = i + 60
             image_each_slice = []
             for j in range(8):
                 img = cv2.imread(os.path.join(
@@ -124,6 +130,12 @@ class PLC_Train_dataset(Dataset):
         images = []
         gts = []
         for i in range(len(label_files)):
+            if (images_path.endswith("/validation/images")):
+                i = i + 30
+            elif (images_path.endswith("/test/images")):
+                i = i + 40
+            elif (images_path.endswith("/unlabeled_DSA")):
+                i = i + 60
             image_each_slice = []
             for j in range(8):
                 img = cv2.imread(os.path.join(
@@ -202,8 +214,12 @@ class Test_dataset(Dataset):
         images = []
         gts = []
         for i in range(len(label_files)):
-            if (images_path == VAL_IMAGE_PATH):
+            if (images_path.endswith("/validation/images")):
                 i = i + 30
+            elif (images_path.endswith("/test/images")):
+                i = i + 40
+            elif (images_path.endswith("/unlabeled_DSA")):
+                i = i + 60
             image_each_slice = []
             for j in range(8):
                 img = cv2.imread(os.path.join(
