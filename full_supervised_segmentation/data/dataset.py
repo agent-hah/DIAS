@@ -20,7 +20,9 @@ class Train_dataset(Dataset):
         self.labels_path = labels_path
         self.size = config.DATASET.PATCH_SIZE
         self.num_each_epoch = config.DATASET.NUM_EACH_EPOCH
-        self.image_list = os.listdir(self.images_path)
+        self.images, self.gts = self.read_image(
+            self.images_path, self.labels_path)
+        self.config = config
 
         seed = np.random.randint(123)
 
@@ -40,17 +42,45 @@ class Train_dataset(Dataset):
             ToTensor(False)
         ])
 
+    def read_image(self, images_path, label_path):
+        label_files = list(sorted(os.listdir(label_path)))
+        images = []
+        gts = []
+        for i in range(len(label_files)):
+            if (images_path == VAL_IMAGE_PATH):
+                i = i + 30
+            image_each_slice = []
+            for j in range(8):
+                img = cv2.imread(os.path.join(
+                    images_path, f"image_s{i}_i{j}.png"), 0)
+                if img is not None:
+                    image_each_slice.append(img)
+                else:
+                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
+
+            seq = np.array(image_each_slice)
+            mn = seq.mean()
+            std = seq.std()
+            seq = (seq - mn) / (std + 1e-8)
+            images.append(seq)
+
+            gt = cv2.imread(os.path.join(
+                label_path, f"label_s{i}.png"), 0)
+            if gt is None:
+                ValueError(f"Label file for image_s{i} not found in {label_path}")
+            else:
+                gt = np.array(gt/255)
+                gts.append(gt)
+
+        return images, gts
+
     def __getitem__(self, idx):
-        id = random.randint(0, len(self.image_list) - 1)
-        img_id = self.image_list[id]
-        img =  np.load(os.path.join(self.images_path,img_id))
-        gt = cv2.imread(os.path.join(
-                self.labels_path, f"label_s{img_id.split('.')[0]}.png"), 0)
-        gt = np.array(gt/255)[np.newaxis]
-        # gt = np.load(os.path.join(self.labels_path,img_id))[np.newaxis]
+        id = random.randint(0, len(self.images) - 1)
+        img = self.images[id]
+        gt = self.gts[id]
+
         img = self.seq_DA(img)
         gt = self.gt_DA(gt)
-        
         return img, gt.long()
 
     def __len__(self):
@@ -69,6 +99,8 @@ class Test_dataset(Train_dataset):
             self.img_list, self.patch_size, self.stride)
         self.gt_patch = self.get_patch(
             self.gt_list, self.patch_size, self.stride)
+        
+
     def read_image(self, images_path, label_path):
         label_files = list(sorted(os.listdir(label_path)))
         images = []
@@ -123,7 +155,7 @@ class Test_dataset(Train_dataset):
     def __getitem__(self, idx):
 
         img = self.img_patch[idx]
-        gt = self.gt_patch[idx]
+        gt = self.gt_patch[idx].squeeze(0)
         return img, gt.long()
 
     def __len__(self):

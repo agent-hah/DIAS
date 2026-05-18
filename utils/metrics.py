@@ -29,7 +29,7 @@ def to_one_hot(seg, all_seg_labels=None):
     return result
 
 
-def get_metrics(predict, target,run_clDice = False, threshold=0.5):
+def get_metrics(predict, target,run_clDice = True, threshold=0.5):
 
 
     predict_b = np.where(predict >= threshold, 1, 0)
