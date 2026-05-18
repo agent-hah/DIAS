@@ -34,6 +34,9 @@ def get_metrics(predict, target,run_clDice = True, threshold=0.5):
 
     predict_b = np.where(predict >= threshold, 1, 0)
 
+    if target.shape != predict_b.shape:
+        target = target.reshape(predict_b.shape)
+
     cldice = clDice(predict_b, target) if run_clDice else 0
     predict = predict.flatten()
     predict_b = predict_b.flatten()

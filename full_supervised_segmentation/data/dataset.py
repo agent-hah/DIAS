@@ -69,7 +69,7 @@ class Train_dataset(Dataset):
             if gt is None:
                 ValueError(f"Label file for image_s{i} not found in {label_path}")
             else:
-                gt = np.array(gt/255)
+                gt = np.array(gt/255)[np.newaxis]
                 gts.append(gt)
 
         return images, gts
