@@ -96,6 +96,10 @@ class Trainer:
 
             if not self.is_2d:
                 img = img.unsqueeze(1)
+
+            if gt.dim() == img.dim() - 1:
+                gt = gt.unsqueeze(1)
+            
             self.optimizer.zero_grad()
             with torch.cuda.amp.autocast(enabled=self.config.AMP):
                 pre = self.model(img)
@@ -146,6 +150,10 @@ class Trainer:
                 
                 if not self.is_2d:
                     img = img.unsqueeze(1)
+                    
+                if gt.dim() == img.dim() - 1:
+                    gt = gt.unsqueeze(1)
+                
                 with torch.cuda.amp.autocast(enabled=self.config.AMP):
 
                     predict = self.model(img)
