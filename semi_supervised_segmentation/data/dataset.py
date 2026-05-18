@@ -233,6 +233,12 @@ class inference_dataset(test_dataset):
         num_files = list(sorted(os.listdir(images_path)))
         images = []
         for i in range(len(num_files)//8):
+            if (images_path.endswith("/validation/images")):
+                i = i + 30
+            elif (images_path.endswith("/test/images")):
+                i = i + 40
+            elif (images_path.endswith("/unlabeled_DSA")):
+                i = i + 60
             image_each_slice = []
             for j in range(8):
                 img = cv2.imread(os.path.join(
