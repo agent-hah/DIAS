@@ -22,12 +22,12 @@ _C.WANDB.MODE = "offline"
 # Data settings
 # -----------------------------------------------------------------------------
 _C.DATASET = CN()
-_C.DATASET.TRAIN_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/training/images"
-_C.DATASET.TRAIN_LABEL_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/training/labels"
-_C.DATASET.VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
-_C.DATASET.VAL_LABEL_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/labels"
-_C.DATASET.TEST_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/test/images"
-_C.DATASET.TEST_LABEL_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/test/labels"
+_C.DATASET.TRAIN_IMAGE_PATH = "d_data/training/images"
+_C.DATASET.TRAIN_LABEL_PATH = "d_data/training/labels"
+_C.DATASET.VAL_IMAGE_PATH = "d_data/validation/images"
+_C.DATASET.VAL_LABEL_PATH = "d_data/validation/labels"
+_C.DATASET.TEST_IMAGE_PATH = "d_data/test/images"
+_C.DATASET.TEST_LABEL_PATH = "d_data/test/labels"
 _C.DATASET.STRIDE = 32
 _C.DATASET.PATCH_SIZE = (64, 64)
 _C.DATASET.NUM_EACH_EPOCH = 20000

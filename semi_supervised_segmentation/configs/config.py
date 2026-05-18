@@ -22,13 +22,13 @@ _C.WANDB.MODE = "offline"
 # Data settings
 # -----------------------------------------------------------------------------
 _C.DATASET = CN()
-_C.DATASET.TRAIN_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/training/images"
-_C.DATASET.TRAIN_LABEL_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/training/labels"
-_C.DATASET.UNLABEL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/unlabeled_DSA"
-_C.DATASET.VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
-_C.DATASET.VAL_LABEL_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/labels"
-_C.DATASET.TEST_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/test/images"
-_C.DATASET.TEST_LABEL_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/test/labels"
+_C.DATASET.TRAIN_IMAGE_PATH = "d_data/training/images"
+_C.DATASET.TRAIN_LABEL_PATH = "d_data/training/labels"
+_C.DATASET.UNLABEL_IMAGE_PATH = "d_data/unlabeled_DSA"
+_C.DATASET.VAL_IMAGE_PATH = "d_data/validation/images"
+_C.DATASET.VAL_LABEL_PATH = "d_data/validation/labels"
+_C.DATASET.TEST_IMAGE_PATH = "d_data/test/images"
+_C.DATASET.TEST_LABEL_PATH = "d_data/test/labels"
 _C.DATASET.NUM_LABEL = 1
 _C.DATASET.NUM_UNLABEL = 30
 _C.DATASET.STRIDE = 32

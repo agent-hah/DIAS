@@ -11,7 +11,7 @@ import random
 
 cv2.setNumThreads(0)
 
-VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
+VAL_IMAGE_PATH = "d_data/validation/images"
 
 
 class Train_dataset(Dataset):

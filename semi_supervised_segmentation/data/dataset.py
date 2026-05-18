@@ -12,7 +12,7 @@ sys.path.append("..")
 
 cv2.setNumThreads(0)
 
-VAL_IMAGE_PATH = "/Users/ashmithandoo/Projects/Lab/d_data/validation/images"
+VAL_IMAGE_PATH = "d_data/validation/images"
 
 class label_dataset(Dataset):
     def __init__(self, config, images_path, labels_path):
