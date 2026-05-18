@@ -10,7 +10,7 @@ import random
 
 cv2.setNumThreads(0)
 
-VAL_IMAGE_PATH = "d_data/validation/images"
+VAL_IMAGE_PATH = "d_data/DIAS/validation/images"
 
 
 class Train_dataset(Dataset):

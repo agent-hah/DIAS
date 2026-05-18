@@ -23,18 +23,18 @@ _C.SCRIBBLE_TYPE = "scribble"
 # Data settings
 # -----------------------------------------------------------------------------
 _C.DATASET = CN()
-_C.DATASET.TRAIN_IMAGE_PATH = "d_data/training/images"
+_C.DATASET.TRAIN_IMAGE_PATH = "d_data/DIAS/training/images"
 # _C.DATASET.SCRIBBLE_LABEL_PATH = "/home/lwt/data/CVSS/training/scribble_type/scribble"
-_C.DATASET.MANUAL_LABEL_PATH = "d_data/training/wsl/label_wlmV3"
+_C.DATASET.MANUAL_LABEL_PATH = "d_data/DIAS/training/wsl/label_wlmV3"
 # _C.DATASET.CENTERLINE_LABEL_PATH = "/home/lwt/data/CVSS/training/scribble_type/centerline"
 # _C.DATASET.CENTERLINE_LABEL_PATH = "/home/lwt/data/CVSS/training/centerline"
-_C.DATASET.SCRIBBLE_LABEL_PATH = "d_data/training/scribble_labels/RDFA"
+_C.DATASET.SCRIBBLE_LABEL_PATH = "d_data/DIAS/training/scribble_labels/RDFA"
 # _C.DATASET.CENTERLINE_LABEL_PATH = "/home/lwt/data/CVSS/training/scribble_type/scrawl_labels"
 
-_C.DATASET.VAL_IMAGE_PATH = "d_data/validation/images"
-_C.DATASET.VAL_LABEL_PATH = "d_data/validation/labels"
-_C.DATASET.TEST_IMAGE_PATH = "d_data/test/images"
-_C.DATASET.TEST_LABEL_PATH = "d_data/test/labels"
+_C.DATASET.VAL_IMAGE_PATH = "d_data/DIAS/validation/images"
+_C.DATASET.VAL_LABEL_PATH = "d_data/DIAS/validation/labels"
+_C.DATASET.TEST_IMAGE_PATH = "d_data/DIAS/test/images"
+_C.DATASET.TEST_LABEL_PATH = "d_data/DIAS/test/labels"
 
 # _C.DATASET.TEST_IMAGE_PATH  = "/home/lwt/Lsata4t/data/CVSS/training/images"
 # _C.DATASET.TEST_LABEL_PATH = "/home/lwt/Lsata4t/data/CVSS/training/labels"
