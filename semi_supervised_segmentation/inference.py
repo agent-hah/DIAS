@@ -42,7 +42,6 @@ class Inference(Trainer):
         pres = torch.stack(pres, 0).cpu()
 
         H,W = 800,800
-        num_data = 60
         pad_h = self.stride - (H - self.patch_size[0]) % self.stride
         pad_w = self.stride - (W - self.patch_size[1]) % self.stride
         new_h = H + pad_h
@@ -51,9 +50,11 @@ class Inference(Trainer):
         predict = pres[:,0,0:H,0:W]
         predict_b = np.where(predict >= 0.5, 1, 0)
 
+        num_data = predict_b.shape[0]
+
         for j in range(num_data):
             
-            cv2.imwrite(self.save_path + f"/label_s{j}.png", np.uint8(predict_b[j]*255))
+            cv2.imwrite(self.save_path + f"/label_s{j + 60}.png", np.uint8(predict_b[j]*255))
            
         logger.info(f"###### Inference finish ######")
        
