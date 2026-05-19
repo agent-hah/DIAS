@@ -279,7 +279,7 @@ class Trainer:
         self.VC = AverageMeter()
         self.cldice = AverageMeter()
 
-    def _update_metrics(self, DSC, Acc, Sen, Spe, IOU, AUC, cldice):
+    def _update_metrics(self, DSC, Acc, Sen, Spe, IOU, AUC, cldice, **kwargs):
         self.DSC.update(DSC)
         self.acc.update(Acc)
         self.sen.update(Sen)

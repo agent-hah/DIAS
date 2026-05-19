@@ -225,7 +225,7 @@ class Trainer:
         self.iou = AverageMeter()
         self.VC = AverageMeter()
 
-    def _metrics_update(self, AUC, DSC, Acc, Sen, Spe, Pre, IOU):
+    def _metrics_update(self, AUC, DSC, Acc, Sen, Spe, Pre, IOU, **kwargs):
         self.auc.update(AUC)
         self.f1.update(DSC)
         self.acc.update(Acc)
