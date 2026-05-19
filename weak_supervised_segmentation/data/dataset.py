@@ -10,8 +10,6 @@ import random
 
 cv2.setNumThreads(0)
 
-VAL_IMAGE_PATH = "d_data/DIAS/validation/images"
-
 
 class Train_dataset(Dataset):
     def __init__(self, config, images_path, labels_path):

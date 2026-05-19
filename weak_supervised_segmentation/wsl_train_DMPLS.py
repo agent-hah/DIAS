@@ -117,7 +117,7 @@ class Trainer:
                 img = img.unsqueeze(1)
             self.optimizer.zero_grad()
             with torch.cuda.amp.autocast(enabled=self.config.AMP):
-                pre = self.model(img)
+                # pre = self.model(img)
 
 
                 outputs, outputs_aux1 = self.model(img)
@@ -155,7 +155,7 @@ class Trainer:
             self.batch_time.update(time.time() - tic)
 
             self._metrics_update(
-                *get_metrics(torch.softmax(pre[0][:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy()).values())
+                **get_metrics(torch.softmax(outputs[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy()))
             tbar.set_description(
                 'TRAIN ({}) | Loss: {:.4f} | AUC {:.4f} F1 {:.4f} Acc {:.4f}  Sen {:.4f} Spe {:.4f} Pre {:.4f} IOU {:.4f} |B {:.2f} D {:.2f} |'.format(
                     epoch, self.total_loss.mean, *self._metrics_ave().values(), self.batch_time.mean, self.data_time.mean))
@@ -207,7 +207,7 @@ class Trainer:
 
                 self.total_loss.update(loss.item())
                 self._metrics_update(
-                    *get_metrics(torch.softmax(predict[0][:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy()).values())
+                    **get_metrics(torch.softmax(outputs[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy()))
                 tbar.set_description(
                     'EVAL ({})  | Loss: {:.4f} | AUC {:.4f} F1 {:.4f} Acc {:.4f} Sen {:.4f} Spe {:.4f} Pre {:.4f} IOU {:.4f} |'.format(
                         epoch, self.total_loss.mean, *self._metrics_ave().values()))
@@ -265,14 +265,14 @@ class Trainer:
         self.iou = AverageMeter()
         self.VC = AverageMeter()
 
-    def _metrics_update(self, auc, f1, acc, sen, spe, pre, iou):
-        self.auc.update(auc)
-        self.f1.update(f1)
-        self.acc.update(acc)
-        self.sen.update(sen)
-        self.spe.update(spe)
-        self.pre.update(pre)
-        self.iou.update(iou)
+    def _metrics_update(self, AUC, DSC, Acc, Sen, Spe, Pre, IOU):
+        self.auc.update(AUC)
+        self.f1.update(DSC)
+        self.acc.update(Acc)
+        self.sen.update(Sen)
+        self.spe.update(Spe)
+        self.pre.update(Pre)
+        self.iou.update(IOU)
 
     def _metrics_ave(self):
 

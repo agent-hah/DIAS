@@ -180,7 +180,7 @@ class Trainer:
             self.batch_time.update(time.time() - tic)
 
             self._update_metrics(
-                *get_metrics(torch.softmax(pre1[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy(), run_clDice=True).values())
+                **get_metrics(torch.softmax(pre1[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy(), run_clDice=True))
             tbar.set_description(
                 'TRAIN ({}) | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f}  IOU {:.4f} AUC {:.4f} |B {:.2f} D {:.2f} |'.format(
                     epoch, self.total_loss.mean, *self._get_metrics_mean().values(), self.batch_time.mean, self.data_time.mean))
@@ -218,7 +218,7 @@ class Trainer:
 
                 self.total_loss.update(loss.item())
                 self._update_metrics(
-                    *get_metrics(torch.softmax(predict[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy(), run_clDice=True).values())
+                    **get_metrics(torch.softmax(predict[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy(), run_clDice=True))
                 tbar.set_description(
                 'EVAL ({})  | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f}  IOU {:.4f} AUC {:.4f} |'.format(
                     epoch, self.total_loss.mean, *self._get_metrics_mean().values()))
@@ -279,13 +279,13 @@ class Trainer:
         self.VC = AverageMeter()
         self.cldice = AverageMeter()
 
-    def _update_metrics(self, DSC, acc, sen, spe, iou,auc, cldice):
+    def _update_metrics(self, DSC, Acc, Sen, Spe, IOU, AUC, cldice):
         self.DSC.update(DSC)
-        self.acc.update(acc)
-        self.sen.update(sen)
-        self.spe.update(spe)
-        self.iou.update(iou)
-        self.auc.update(auc)
+        self.acc.update(Acc)
+        self.sen.update(Sen)
+        self.spe.update(Spe)
+        self.iou.update(IOU)
+        self.auc.update(AUC)
         self.cldice.update(cldice)
 
     def _get_metrics_mean(self):

@@ -64,6 +64,7 @@ def get_metrics(predict, target,run_clDice = True, threshold=0.5):
         "Acc": np.round(acc, 4),
         "Sen": np.round(sen, 4),
         "Spe": np.round(spe, 4),
+        "Pre": np.round(pre, 4),
         "IOU": np.round(iou, 4),
         "AUC": np.round(auc, 4),
         "cldice": np.round(cldice, 4)
