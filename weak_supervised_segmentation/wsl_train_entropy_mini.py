@@ -263,7 +263,7 @@ def parse_option():
         nargs='+',
     )
     parser.add_argument("--tag", help='tag of experiment')
-    parser.add_argument("-wm", "--wandb_mode", default="online")
+    parser.add_argument("-wm", "--wandb_mode", default="offline")
     parser.add_argument("-mt", "--model_type", default="FR_UNet")
     parser.add_argument("-st", "--scribble_type", default="scribble")
     parser.add_argument('-bs', '--batch-size', type=int, default=64,
