@@ -47,8 +47,10 @@ def get_metrics(predict, target,run_clDice = True, threshold=0.5):
     tn = ((1 - predict_b) * (1 - target)).sum()
     fp = ((1 - target) * predict_b).sum()
     fn = ((1 - predict_b) * target).sum()
-    if np.all(target == 0) or np.all(predict == 0):
+    if np.all(target == 0) and np.all(predict == 0):
         auc = 1
+    elif np.all(target == 0) or np.all(predict == 0):
+        auc = 0.5  # Model failed to predict anything, or hallucinated vessels on a blank image
     else:
         auc = roc_auc_score(target, predict)
 
@@ -58,7 +60,7 @@ def get_metrics(predict, target,run_clDice = True, threshold=0.5):
     sen = tp / (tp + fn + epsilon)
     spe = tn / (tn + fp + epsilon)
     iou = tp / (tp + fp + fn + epsilon)
-    DSC = 2 * pre * sen / (pre + sen)
+    DSC = 2 * pre * sen / (pre + sen + epsilon)
     return {
         "DSC": np.round(DSC, 4),
         "Acc": np.round(acc, 4),

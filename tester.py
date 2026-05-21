@@ -94,7 +94,7 @@ class Tester(Trainer):
             cv2.imwrite(self.save_path + f"/pre_b{j}.png", pre_b_img)
 
             # (And save your color map)
-            cv2.imwrite(self.save_path + f"/color_b{j}.png", get_color(pre_b_img, gt_img))
+            cv2.imwrite(self.save_path + f"/color_b{j}.png", get_color(pre_b_np, gt_np).astype(np.uint8))
             
             # cv2.imwrite(self.save_path + f"/gt{j}.png", np.uint8(gts[j]*255))
             # cv2.imwrite(self.save_path + f"/pre{j}.png", np.uint8(predict[j]*255))
@@ -133,10 +133,10 @@ class Tester(Trainer):
 
         df.to_csv(join(self.save_path, f"{self.model_name}_result.csv"))
         for k, v in self._get_metrics_mean().items():
-            logger.info(f'{str(k):5s}: {v}')
+            logger.info(f'{str(k):5s} (Mean) : {v}')
 
         for k, v in self._get_metrics_std().items():
-            logger.info(f'{str(k):5s}: {v}')
+            logger.info(f'{str(k):5s} (Std)  : {v}')
         
         logger.info(f'VC_mean: {self.VC.mean}')
        
