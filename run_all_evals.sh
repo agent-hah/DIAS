@@ -6,24 +6,24 @@
 # ==============================================================================
 
 # Fully-Supervised Model
-FSL_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_260519_182052/best_model.pth"
+FSL_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_260519_182052"
 
 # Semi-Supervised Model
-SSL_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_260519_184750/best_model.pth"
+SSL_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_260519_184750/ite_1_student"
 
 # Weakly-Supervised Single Models (Uses standard wsl_test.py)
-WSL_PCE_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260521_001405/best_model.pth"
-WSL_EM_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260520_154529/best_model.pth"
-WSL_RLOSS_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260520_173040/best_model.pth"
-WSL_IVM_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260520_194029/best_model.pth"
+WSL_PCE_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260521_001405"
+WSL_EM_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260520_154529"
+WSL_RLOSS_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260520_173040"
+WSL_IVM_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_scribble_260520_194029"
 
 # Weakly-Supervised Dual Models (Uses wsl_test_doubel_model.py)
-WSL_SSCR_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_DP_scribble_260521_025759/best_model.pth"
-WSL_SSCR_ABLATION_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/scribble_FR_UNet_260521_152430/best_model.pth"
-WSL_EMA_SSCR_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/scribble_FR_UNet_260520_004032/best_model.pth"
+WSL_SSCR_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_DP_scribble_260521_025759"
+WSL_SSCR_ABLATION_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/scribble_FR_UNet_260521_152430"
+WSL_EMA_SSCR_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/scribble_FR_UNet_260520_004032"
 
 # Weakly-Supervised DMPLS Model (Uses wsl_test_DMPLS.py)
-WSL_DMPLS_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_CCT_scribble_260519_232902/best_model.pth"
+WSL_DMPLS_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_CCT_scribble_260519_232902"
 
 
 # ==============================================================================

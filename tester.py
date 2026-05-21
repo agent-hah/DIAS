@@ -72,9 +72,9 @@ class Tester(Trainer):
         for j in range(num_data):
 
             # 1. Safely extract from GPU to numpy
-            gt_np = gts[j].squeeze().cpu().detach().numpy()
-            pre_np = predict[j].squeeze().cpu().detach().numpy()
-            pre_b_np = predict_b[j].squeeze().cpu().detach().numpy()
+            gt_np = gts[j].squeeze()
+            pre_np = predict[j].squeeze()
+            pre_b_np = predict_b[j].squeeze()
 
             # 2. Check for 2-channel predictions (OpenCV cannot save 2-channel images!)
             # If the prediction has a shape like (2, Height, Width), grab index 1 (the foreground class)
@@ -101,7 +101,7 @@ class Tester(Trainer):
             # cv2.imwrite(self.save_path + f"/pre_b{j}.png", np.uint8(predict_b[j]*255))
             # cv2.imwrite(self.save_path + f"/color_b{j}.png", get_color(predict_b[j],gts[j]))
 
-            self._update_metrics(*get_metrics(predict[j], gts[j],run_clDice= True).values())
+            self._update_metrics(**get_metrics(predict[j], gts[j],run_clDice= True))
             self.VC.update(count_connect_component(predict_b[j], gts[j]))
 
         
@@ -131,7 +131,7 @@ class Tester(Trainer):
   
         
 
-        df.to_csv(join(self.save_path, f"{self.model_name}_result.cvs"))
+        df.to_csv(join(self.save_path, f"{self.model_name}_result.csv"))
         for k, v in self._get_metrics_mean().items():
             logger.info(f'{str(k):5s}: {v}')
 

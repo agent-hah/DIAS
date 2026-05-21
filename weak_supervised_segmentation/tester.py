@@ -68,7 +68,7 @@ class Tester(Trainer):
             cv2.imwrite(self.save_path + f"/pre{j}.png", (np.squeeze(predict[j])*255).astype(np.uint8))    
             cv2.imwrite(self.save_path + f"/pre_b{j}.png", (np.squeeze(predict_b[j])*255).astype(np.uint8))
             cv2.imwrite(self.save_path + f"/color_b{j}.png", get_color(predict_b[j],gts[j]))
-            self._update_metrics(*get_metrics(predict[j], gts[j],run_clDice= True).values())
+            self._update_metrics(**get_metrics(predict[j], gts[j],run_clDice= True))
             self.VC.update(count_connect_component(predict_b[j], gts[j]))
 
         
@@ -90,7 +90,7 @@ class Tester(Trainer):
 
         # 创建DataFrame
         df = pd.DataFrame(data_dict)
-        df.to_csv(join(self.save_path, f"{self.model_name}_result.cvs"))
+        df.to_csv(join(self.save_path, f"{self.model_name}_result.csv"))
         for k, v in self._get_metrics_mean().items():
             logger.info(f'{str(k):5s}: {v}')
 
