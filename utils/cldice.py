@@ -1,6 +1,4 @@
 import numpy as np
-from scipy.ndimage import distance_transform_edt
-
 
 def clDice(predict, target):
     """
@@ -20,18 +18,13 @@ def clDice(predict, target):
     predict_skeleton = _get_skeleton(predict)
     target_skeleton = _get_skeleton(target)
 
-    # Calculate distances from each point to the nearest skeleton
-    predict_dist = distance_transform_edt(1 - predict_skeleton)
-    target_dist = distance_transform_edt(1 - target_skeleton)
+    # Topology Precision: intersection of predicted skeleton and target mask
+    precision = np.sum(predict_skeleton * target) / (np.sum(predict_skeleton) + 1e-10)
+    
+    # Topology Sensitivity (Recall): intersection of target skeleton and predicted mask
+    recall = np.sum(target_skeleton * predict) / (np.sum(target_skeleton) + 1e-10)
 
-    # clDice = 2 * |pred_skel ∩ target| / (|pred_skel| + |target|)
-    # where intersection is points in target_skeleton close to predict_skeleton
-    pred_skel_in_target = target_dist[predict_skeleton == 1] # type: ignore
-    target_skel_in_pred = predict_dist[target_skeleton == 1] # type: ignore
-
-    precision = len(np.where(pred_skel_in_target == 0)[0]) / (np.sum(predict_skeleton) + 1e-10)
-    recall = len(np.where(target_skel_in_pred == 0)[0]) / (np.sum(target_skeleton) + 1e-10)
-
+    # clDice is the harmonic mean of topology precision and topology sensitivity
     cl_dice = 2 * precision * recall / (precision + recall + 1e-10)
 
     return cl_dice

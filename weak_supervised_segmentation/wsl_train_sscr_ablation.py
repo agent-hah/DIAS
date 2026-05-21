@@ -184,8 +184,8 @@ class Trainer:
             self._metrics_update(
                 **get_metrics(torch.softmax(pre1[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy(), run_clDice=True))
             tbar.set_description(
-                'TRAIN ({}) | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f}  IOU {:.4f} AUC {:.4f} |B {:.2f} D {:.2f} |'.format(
-                    epoch, self.total_loss.mean, *self._metrics_ave().values(), self.batch_time.mean, self.data_time.mean))
+            'TRAIN ({}) | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f} Pre {:.4f} IOU {:.4f} AUC {:.4f} clDice {:.4f} |B {:.2f} D {:.2f} |'.format(
+                epoch, self.total_loss.mean, *self._metrics_ave().values(), self.batch_time.mean, self.data_time.mean))
             tic = time.time()
             self.lr_scheduler1.step_update(epoch * self.num_steps + idx)
             self.lr_scheduler2.step_update(epoch * self.num_steps + idx)
@@ -223,7 +223,7 @@ class Trainer:
                 self._metrics_update(
                     **get_metrics(torch.softmax(predict[:, :self.config.DATASET.NUM_CLASSES], dim=1).cpu().detach().numpy()[:, 1, :, :], gt.cpu().detach().numpy(), run_clDice=True))
                 tbar.set_description(
-                'EVAL ({})  | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f}  IOU {:.4f} AUC {:.4f} |'.format(
+                'EVAL ({})  | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f}  Pre {:.4f} IOU {:.4f} AUC {:.4f} clDice {:.4f} |'.format(
                     epoch, self.total_loss.mean, *self._metrics_ave().values()))
 
         if self._get_rank() == 0:
