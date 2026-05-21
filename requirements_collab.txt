@@ -7,15 +7,20 @@ dicom2nifti
 efficientnet-pytorch
 einops
 imagecodecs
+loguru
 MedPy
 mmcls
 monai
 nibabel
 numpy-stl
+prefetch_generator  # Added back
 pretrainedmodels
 pydicom
+python-slugify
 rasterio
+rich
 RLE
+ruamel.yaml
 segmentation-models-pytorch
 SimpleITK
 Surface-Distance-Based-Measures @ git+https://github.com/JoHof/surface-distance.git@f7afba85bb03da28687cfa678a6fbb4b4046aad9
