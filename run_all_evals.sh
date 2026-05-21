@@ -5,6 +5,9 @@
 # Replace the placeholders with the actual paths to your trained .pth files
 # ==============================================================================
 
+# ---> Define your single output directory for all CSV results here <---
+FINAL_CSV_DIR="/content/drive/MyDrive/DIAS_Project/results"
+
 # Fully-Supervised Model
 FSL_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_260519_182052"
 
@@ -61,3 +64,18 @@ python weak_supervised_segmentation/wsl_test_DMPLS.py -mp "$WSL_DMPLS_CKPT"
 echo "---------------------------------------------------"
 
 echo "All evaluations complete! Check the save_results/ directory for your CSV files and images."
+
+
+# ==============================================================================
+# 3. CONSOLIDATE RESULTS
+# ==============================================================================
+echo "Consolidating CSV files..."
+
+# Create the final directory if it doesn't already exist
+mkdir -p "$FINAL_CSV_DIR"
+
+# Find all generated CSV files in the save_results directory and copy them to the final directory
+find save_results/ -type f -name "*.csv" -exec cp {} "$FINAL_CSV_DIR/" \;
+
+echo "All evaluations complete!"
+echo "Your consolidated CSV results have been saved to: $FINAL_CSV_DIR"
