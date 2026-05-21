@@ -83,7 +83,7 @@ class Tester(Trainer):
             cv2.imwrite(os.path.join(self.save_path, f"pre{j}.png"), (np.squeeze(predict[j])*255).astype(np.uint8))
             cv2.imwrite(os.path.join(self.save_path, f"pre_b{j}.png"), (np.squeeze(predict_b[j])*255).astype(np.uint8))
             cv2.imwrite(os.path.join(self.save_path, f"color_b{j}.png"), get_color(predict_b[j],gts[j]).astype(np.uint8))
-            self._update_metrics(*get_metrics(predict[j], gts[j],run_clDice= True).values())
+            self._update_metrics(**get_metrics(predict[j], gts[j],run_clDice= True))
             self.VC.update(count_connect_component(predict_b[j], gts[j]))
 
         
