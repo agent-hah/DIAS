@@ -23,6 +23,18 @@ def download_and_extract():
         
     print("Extraction complete.")
 
+    # Remove any thumbs.db files
+    print("Removing any 'thumbs.db' files...")
+    for root, dirs, files in os.walk(extract_dir):
+        for file in files:
+            if file.lower() == 'thumbs.db':
+                file_path = os.path.join(root, file)
+                try:
+                    os.remove(file_path)
+                    print(f"Deleted: {file_path}")
+                except Exception as e:
+                    print(f"Failed to delete {file_path}: {e}")
+
     # Delete the zip file to save space
     print("Cleaning up temporary zip file...")
     os.remove(zip_path)
