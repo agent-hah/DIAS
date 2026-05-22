@@ -148,15 +148,17 @@ class Trainer:
                 img = torch.as_tensor(img)
                 gt = torch.as_tensor(gt)
                 
-                if not self.is_2d:
-                    img = img.unsqueeze(1)
-
-                if gt.dim() == img.dim() - 1:
-                    gt = gt.unsqueeze(1)
                 
                 with torch.cuda.amp.autocast(enabled=self.config.AMP):
 
                     predict = self.model(img)
+
+                    # Match gt dimensions to model output (pre) instead of input (img)
+                    if gt.dim() == pre.dim() - 1:
+                        gt = gt.unsqueeze(1)
+                    elif gt.dim() > pre.dim() and gt.size(1) == 1:
+                        gt = gt.squeeze(1)
+
                     loss = self.loss(predict, gt)
 
                 self.total_loss.update(loss.item())
