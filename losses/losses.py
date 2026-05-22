@@ -52,7 +52,8 @@ def get_tp_fp_fn_tn(net_output, gt, axes=None, mask=None, square=False):
 
     with torch.no_grad():
         if len(shp_x) != len(shp_y):
-            gt = gt.view((shp_y[0], 1, *shp_y[1:]))
+            # Reshape using shp_x to guarantee dimension matching
+            gt = gt.view((shp_x[0], 1, *shp_x[2:]))
 
         if all([i == j for i, j in zip(net_output.shape, gt.shape)]):
             # if this is the case then gt is probably already a one hot encoding
