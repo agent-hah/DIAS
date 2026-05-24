@@ -3,15 +3,23 @@ import torch
 import torch.nn as nn
 from .DRM import DRM
 
+
 def downsample():
     return nn.MaxPool3d(kernel_size=2, stride=2)
+
+
 def downsampleV2():
-    return nn.MaxPool3d(kernel_size=[1,2,2], stride=[1,2,2])
+    return nn.MaxPool3d(kernel_size=[1, 2, 2], stride=[1, 2, 2])
+
 
 def deconv(in_channels, out_channels):
     return nn.ConvTranspose3d(in_channels, out_channels, kernel_size=2, stride=2)
+
+
 def deconvV2(in_channels, out_channels):
-    return nn.ConvTranspose3d(in_channels, out_channels, kernel_size=[1,2,2], stride=[1,2,2])
+    return nn.ConvTranspose3d(
+        in_channels, out_channels, kernel_size=[1, 2, 2], stride=[1, 2, 2]
+    )
 
 
 def initialize_weights(*models):
@@ -54,7 +62,7 @@ class Decoder3d(nn.Module):
             nn.ReLU(inplace=False),
             nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1),
             nn.BatchNorm3d(out_channels),
-            nn.ReLU(inplace=False)
+            nn.ReLU(inplace=False),
         )
 
     def forward(self, x):
@@ -65,9 +73,15 @@ class Decoder3d(nn.Module):
 class SpatialAttentionBlock3d(nn.Module):
     def __init__(self, in_channels):
         super(SpatialAttentionBlock3d, self).__init__()
-        self.query = nn.Conv3d(in_channels, in_channels // 8, kernel_size=(1, 3, 1), padding=(0, 1, 0))
-        self.key = nn.Conv3d(in_channels, in_channels // 8, kernel_size=(3, 1, 1), padding=(1, 0, 0))
-        self.judge = nn.Conv3d(in_channels, in_channels // 8, kernel_size=(1, 1, 3), padding=(0, 0, 1))
+        self.query = nn.Conv3d(
+            in_channels, in_channels // 8, kernel_size=(1, 3, 1), padding=(0, 1, 0)
+        )
+        self.key = nn.Conv3d(
+            in_channels, in_channels // 8, kernel_size=(3, 1, 1), padding=(1, 0, 0)
+        )
+        self.judge = nn.Conv3d(
+            in_channels, in_channels // 8, kernel_size=(1, 1, 3), padding=(0, 0, 1)
+        )
         self.value = nn.Conv3d(in_channels, in_channels, kernel_size=1)
         self.gamma = nn.Parameter(torch.zeros(1))
         self.softmax = nn.Softmax(dim=-1)
@@ -82,22 +96,36 @@ class SpatialAttentionBlock3d(nn.Module):
         W: width
         D: slice number (depth)
         """
-        B, C, H, W, D = x.size()
-        # compress x: [B,C,H,W,Z]-->[B,H*W*Z,C], make a matrix transpose
-        proj_query = self.query(x).view(B, -1, W * H * D).permute(0, 2, 1)  # -> [B,W*H*D,C]
-        proj_key = self.key(x).view(B, -1, W * H * D)  # -> [B,H*W*D,C]
-        proj_judge = self.judge(x).view(B, -1, W * H * D).permute(0, 2, 1)  # -> [B,C,H*W*D]
+        # Force 32-bit precision to prevent fp16 overflow during massive matmuls
+        with torch.amp.autocast("cuda", enabled=False):
+            x_float = x.float()
+            B, C, H, W, D = x_float.size()
 
-        affinity1 = torch.matmul(proj_query, proj_key)
-        affinity2 = torch.matmul(proj_judge, proj_key)
-        affinity = torch.matmul(affinity1, affinity2)
-        affinity = self.softmax(affinity)
+            proj_query = (
+                self.query(x_float).view(B, -1, W * H * D).permute(0, 2, 1)
+            )  # -> [B,W*H*D,C]
+            proj_key = self.key(x_float).view(B, -1, W * H * D)  # -> [B,H*W*D,C]
+            proj_judge = (
+                self.judge(x_float).view(B, -1, W * H * D).permute(0, 2, 1)
+            )  # -> [B,C,H*W*D]
 
-        proj_value = self.value(x).view(B, -1, H * W * D)  # -> C*N
-        weights = torch.matmul(proj_value, affinity)
-        weights = weights.view(B, C, H, W, D)
-        out = self.gamma * weights + x
-        return out
+            scale = proj_key.size(-2) ** 0.5
+            affinity1 = torch.matmul(proj_query, proj_key) / (scale + 1e-6)
+            affinity2 = torch.matmul(proj_judge, proj_key) / (scale + 1e-6)
+
+            affinity = torch.matmul(affinity1, affinity2) / (
+                affinity1.size(-1) ** 0.5 + 1e-6
+            )
+            affinity = self.softmax(affinity)
+
+            proj_value = self.value(x_float).view(B, -1, H * W * D)  # -> C*N
+            weights = torch.matmul(proj_value, affinity)
+            weights = weights.view(B, C, H, W, D)
+
+            out = self.gamma.float() * weights + x_float
+
+        # Return casted back to whatever the original input was (usually float16)
+        return out.type_as(x)
 
 
 class ChannelAttentionBlock3d(nn.Module):
@@ -111,24 +139,43 @@ class ChannelAttentionBlock3d(nn.Module):
         :param x: input( BxCxHxWxD )
         :return: affinity value + x
         """
-        B, C, H, W, D = x.size()
-        proj_query = x.view(B, C, -1).permute(0, 2, 1)
-        proj_key = x.view(B, C, -1)
-        proj_judge = x.view(B, C, -1).permute(0, 2, 1)
-        affinity1 = torch.matmul(proj_key, proj_query)
-        affinity2 = torch.matmul(proj_key, proj_judge)
-        affinity = torch.matmul(affinity1, affinity2)
-        affinity_new = torch.max(affinity, -1, keepdim=True)[0].expand_as(affinity) - affinity
-        affinity_new = self.softmax(affinity_new)
-        proj_value = x.view(B, C, -1)
-        weights = torch.matmul(affinity_new, proj_value)
-        weights = weights.view(B, C, H, W, D)
-        out = self.gamma * weights + x
-        return out
+        # Force 32-bit precision to prevent fp16 overflow
+        with torch.amp.autocast("cuda", enabled=False):
+            x_float = x.float()
+            B, C, H, W, D = x_float.size()
+
+            proj_query = x_float.view(B, C, -1).permute(0, 2, 1)
+            proj_key = x_float.view(B, C, -1)
+            proj_judge = x_float.view(B, C, -1).permute(0, 2, 1)
+
+            scale1 = proj_query.size(-2) ** 0.5
+            scale2 = proj_judge.size(-2) ** 0.5
+
+            # Note: proj_key MUST be first
+            affinity1 = torch.matmul(proj_key, proj_query) / (scale1 + 1e-6)
+            affinity2 = torch.matmul(proj_key, proj_judge) / (scale2 + 1e-6)
+
+            affinity = torch.matmul(affinity1, affinity2) / (
+                affinity1.size(-1) ** 0.5 + 1e-6
+            )
+
+            affinity_new = (
+                torch.max(affinity, -1, keepdim=True)[0].expand_as(affinity) - affinity
+            )
+            affinity_new = self.softmax(affinity_new)
+
+            proj_value = x_float.view(B, C, -1)
+            weights = torch.matmul(affinity_new, proj_value)
+            weights = weights.view(B, C, H, W, D)
+
+            out = self.gamma.float() * weights + x_float
+
+        # Return casted back to whatever the original input was
+        return out.type_as(x)
 
 
 class AffinityAttention3d(nn.Module):
-    """ Affinity attention module """
+    """Affinity attention module"""
 
     def __init__(self, in_channels):
         super(AffinityAttention3d, self).__init__()
@@ -174,9 +221,9 @@ class CSNet_3D(nn.Module):
         self.deconv2 = deconv(128, 64)
         self.deconv1 = deconvV2(64, 32)
         # self.final = nn.Conv3d(16, num_classes, kernel_size=1)
-        self.DRM = DRM(32,num_classes)
+        self.DRM = DRM(32, num_classes)
         initialize_weights(self)
-        
+
     def forward(self, x):
         enc_input = self.enc_input(x)
         # down1 = self.downsample(enc_input)
@@ -216,3 +263,4 @@ class CSNet_3D(nn.Module):
         final = self.DRM(dec1)
         # final = F.sigmoid(final)
         return final
+
