@@ -1,3 +1,4 @@
+#!/bin/bash
 # python full_supervised_segmentation/fsl_train.py -mt VSS_Net --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/VSS_Net"
 # python full_supervised_segmentation/fsl_train.py -mt Att_UNet --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/Att_UNet"
 # python full_supervised_segmentation/fsl_train.py -mt CSNet --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/CSNet"
@@ -5,10 +6,47 @@
 # python full_supervised_segmentation/fsl_train.py -mt Res_UNet --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/Res_UNet"
 # python full_supervised_segmentation/fsl_train.py -mt UNet_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/UNet_3D"
 # python full_supervised_segmentation/fsl_train.py -mt FR_UNet_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_3D"
-python full_supervised_segmentation/fsl_train.py -mt CSNet_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/CSNet_3D"
+# python full_supervised_segmentation/fsl_train.py -mt CSNet_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/CSNet_3D"
 # python full_supervised_segmentation/fsl_train.py -mt Att_UNet_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/Att_UNet_3D"
 # python full_supervised_segmentation/fsl_train.py -mt Res_UNet_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/Res_UNet_3D"
 # python full_supervised_segmentation/fsl_train.py -mt UNet_Nested_3D --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/UNet_Nested_3D"
 # python full_supervised_segmentation/fsl_train.py -mt PSC --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/PSC"
-# python full_supervised_segmentation/fsl_train.py -mt SVS_Net --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/SVS_Net"
+# python full_supervised_segmentation/fsl_train.py -mt SVS_Net --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/SVS_Npython full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"
+# python full_supervised_segmentation/fsl_train.py -mt UNet --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/UNet"
+# python full_supervised_segmentation/fsl_train.py -mt MAA_Net --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/MAA_Net"
+# python full_supervised_segmentation/fsl_train.py -mt FR_UNet --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet"
+# python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/IPN"
+# python full_supervised_segmentation/fsl_train.py -mt ST_UNet --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/ST_UNet"
+
+# Array to store the names of any models that fail
+failed_models=()
+
+# List of models to train
+models=("UNet" "MAA_Net" "FR_UNet" "IPN" "ST_UNet")
+
+for model in "${models[@]}"; do
+  echo "=================================================="
+  echo "Starting training for $model..."
+
+  # Run the command directly within the if statement.
+  # The '!' checks if the command failed (returned a non-zero exit code).
+  if ! python full_supervised_segmentation/fsl_train.py -mt "$model" --tag NN -wm offline --opts SAVE_DIR "/content/drive/MyDrive/DIAS_Project/saved_models/$model"; then
+    echo "❌ ERROR: $model encountered an exception!"
+    failed_models+=("$model")
+  else
+    echo "✅ SUCCESS: $model completed."
+  fi
+done
+
+# Print the final summary
+echo ""
+echo "================ SUMMARY ================"
+if [ ${#failed_models[@]} -eq 0 ]; then
+  echo "🎉 All models trained successfully!"
+else
+  echo "⚠️ The following models FAILED:"
+  for failed in "${failed_models[@]}"; do
+    echo " - $failed"
+  done
+fi
 
