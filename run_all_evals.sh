@@ -22,6 +22,10 @@ FSL_RES_UNET_3D_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/Res_UNet_
 FSL_UNET_NESTED_3D_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_Nested_3D/UNet_Nested_3D_NN_260522_231250"
 FSL_PSC_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/PSC/PSC_NN_260523_004438"
 FSL_SVS_NET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/SVS_Net/SVS_Net_NN_260523_011332"
+FSL_MAA_NET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/MAA_Net/"
+FSL_FR_UNET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet/FR_UNet_NN_260525_060312"
+FSL_IPN_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/IPN/IPN_NN_260525_143852"
+FSL_ST_UNET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/ST_UNet/ST_UNet_NN_260525_080225"
 
 # Semi-Supervised Model
 SSL_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/FR_UNet_260519_184750/ite_1_student"
@@ -62,6 +66,11 @@ python full_supervised_segmentation/fsl_test.py -mp "$FSL_RES_UNET_3D_CKPT"
 python full_supervised_segmentation/fsl_test.py -mp "$FSL_UNET_NESTED_3D_CKPT"
 python full_supervised_segmentation/fsl_test.py -mp "$FSL_PSC_CKPT"
 python full_supervised_segmentation/fsl_test.py -mp "$FSL_SVS_NET_CKPT"
+
+python full_supervised_segmentation/fsl_train.py -mt MAA_Net --tag NN -wm offline --opts SAVE_DIR "$FSL_MAA_NET_CKPT"
+python full_supervised_segmentation/fsl_train.py -mt FR_UNet --tag NN -wm offline --opts SAVE_DIR "$FSL_FR_UNET_CKPT"
+python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "$FSL_IPN_CKPT"
+python full_supervised_segmentation/fsl_train.py -mt ST_UNet --tag NN -wm offline --opts SAVE_DIR "$FSL_ST_UNET_CKPT"
 echo "---------------------------------------------------"
 
 # Semi-Supervised

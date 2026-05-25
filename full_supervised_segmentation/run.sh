@@ -22,7 +22,7 @@
 failed_models=()
 
 # List of models to train
-models=("UNet" "MAA_Net" "FR_UNet" "IPN" "ST_UNet")
+models=("MAA_Net" "IPN")
 
 for model in "${models[@]}"; do
   echo "=================================================="
