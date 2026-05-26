@@ -4,7 +4,8 @@ from models.utils import InitWeights
 
 
 class PAM_Module(nn.Module):
-    """ Position attention module"""
+    """Position attention module"""
+
     # Ref from SAGAN
 
     def __init__(self, in_dim):
@@ -12,29 +13,34 @@ class PAM_Module(nn.Module):
         self.chanel_in = in_dim
 
         self.query_conv = nn.Conv2d(
-            in_channels=in_dim, out_channels=in_dim//8, kernel_size=1)
+            in_channels=in_dim, out_channels=in_dim // 8, kernel_size=1
+        )
         self.key_conv = nn.Conv2d(
-            in_channels=in_dim, out_channels=in_dim//8, kernel_size=1)
+            in_channels=in_dim, out_channels=in_dim // 8, kernel_size=1
+        )
         self.value_conv = nn.Conv2d(
-            in_channels=in_dim, out_channels=in_dim, kernel_size=1)
+            in_channels=in_dim, out_channels=in_dim, kernel_size=1
+        )
 
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X (HxW) X (HxW)
+        inputs :
+            x : input feature maps( B X C X H X W)
+        returns :
+            out : attention value + input feature
+            attention: B X (HxW) X (HxW)
         """
         m_batchsize, C, height, width = x.size()
-        proj_query = self.query_conv(x).view(
-            m_batchsize, -1, width*height).permute(0, 2, 1)
-        proj_key = self.key_conv(x).view(m_batchsize, -1, width*height)
-        proj_value = self.value_conv(x).view(m_batchsize, -1, width*height)
+        proj_query = (
+            self.query_conv(x).view(m_batchsize, -1, width * height).permute(0, 2, 1)
+        )
+        proj_key = self.key_conv(x).view(m_batchsize, -1, width * height)
+        proj_value = self.value_conv(x).view(m_batchsize, -1, width * height)
 
         energy = torch.bmm(proj_query, proj_key)
+        attention = self.softmax(energy.float()).type_as(energy)
         attention = self.softmax(energy)
         out = torch.bmm(proj_value, attention.permute(0, 2, 1))
         out = out.view(m_batchsize, C, height, width)
@@ -44,35 +50,38 @@ class PAM_Module(nn.Module):
 
 
 class CAM_Module(nn.Module):
-    """ Channel attention module"""
+    """Channel attention module"""
 
     def __init__(self, in_dim):
         super(CAM_Module, self).__init__()
         self.chanel_in = in_dim
         self.query_conv = nn.Conv2d(
-            in_channels=in_dim, out_channels=in_dim, kernel_size=2, stride=2)
+            in_channels=in_dim, out_channels=in_dim, kernel_size=2, stride=2
+        )
         self.key_conv = nn.Conv2d(
-            in_channels=in_dim, out_channels=in_dim,  kernel_size=2, stride=2)
+            in_channels=in_dim, out_channels=in_dim, kernel_size=2, stride=2
+        )
         self.value_conv = nn.Conv2d(
-            in_channels=in_dim, out_channels=in_dim, kernel_size=1)
+            in_channels=in_dim, out_channels=in_dim, kernel_size=1
+        )
 
         self.gamma = nn.Parameter(torch.zeros(1))
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
         """
-            inputs :
-                x : input feature maps( B X C X H X W)
-            returns :
-                out : attention value + input feature
-                attention: B X C X C
+        inputs :
+            x : input feature maps( B X C X H X W)
+        returns :
+            out : attention value + input feature
+            attention: B X C X C
         """
         m_batchsize, C, height, width = x.size()
         proj_query = self.query_conv(x).view(m_batchsize, C, -1)
         proj_key = self.key_conv(x).view(m_batchsize, C, -1).permute(0, 2, 1)
         energy = torch.bmm(proj_query, proj_key)
-        energy_new = torch.max(
-            energy, -1, keepdim=True)[0].expand_as(energy)-energy
+        energy_new = torch.max(energy, -1, keepdim=True)[0].expand_as(energy) - energy
+        attention = self.softmax(energy_new.float()).type_as(energy_new)
         attention = self.softmax(energy_new)
         proj_value = self.value_conv(x).view(m_batchsize, C, -1)
 
@@ -91,21 +100,26 @@ class CPAM(nn.Module):
         self.gamma2 = nn.Parameter(torch.zeros(1))
         self.pam = PAM_Module(inter_channels)
         self.cam = CAM_Module(inter_channels)
-        self.conv_c = nn.Sequential(nn.Conv2d(in_channels, inter_channels, 3, padding=1, bias=False),
-                                    nn.BatchNorm2d(inter_channels),
-                                    nn.ReLU())
+        self.conv_c = nn.Sequential(
+            nn.Conv2d(in_channels, inter_channels, 3, padding=1, bias=False),
+            nn.BatchNorm2d(inter_channels),
+            nn.ReLU(),
+        )
 
-        self.conv_d = nn.Sequential(nn.BatchNorm2d(inter_channels),
-                                    nn.Conv2d(
-                                        inter_channels, inter_channels*shrink, 3, padding=1, bias=False),
-                                    nn.BatchNorm2d(inter_channels*shrink),
-                                    nn.ReLU())
+        self.conv_d = nn.Sequential(
+            nn.BatchNorm2d(inter_channels),
+            nn.Conv2d(
+                inter_channels, inter_channels * shrink, 3, padding=1, bias=False
+            ),
+            nn.BatchNorm2d(inter_channels * shrink),
+            nn.ReLU(),
+        )
 
     def forward(self, x):
         feat1 = self.conv_c(x)
         sa_feat = self.cam(feat1)
         sc_feat = self.pam(feat1)
-        feat_sum = sa_feat*self.gamma1+sc_feat*self.gamma2+feat1
+        feat_sum = sa_feat * self.gamma1 + sc_feat * self.gamma2 + feat1
         output = self.conv_d(feat_sum)
 
         return output
@@ -118,19 +132,14 @@ class conv(nn.Module):
         self.out_c = out_c
 
         self.conv = nn.Sequential(
-
-            nn.Conv2d(out_c, out_c, kernel_size=3,
-                      padding=1, bias=False),
+            nn.Conv2d(out_c, out_c, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_c),
             nn.Dropout2d(dp),
             nn.LeakyReLU(0.1, inplace=True),
-
-            nn.Conv2d(out_c, out_c, kernel_size=3,
-                      padding=1, bias=False),
+            nn.Conv2d(out_c, out_c, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(out_c),
             nn.Dropout2d(dp),
             nn.LeakyReLU(0.1, inplace=True),
-
         )
         self.relu = nn.LeakyReLU(0.1, inplace=True)
 
@@ -146,11 +155,11 @@ class up(nn.Module):
     def __init__(self, in_c, out_c, dp=0):
         super(up, self).__init__()
         self.up = nn.Sequential(
-            nn.ConvTranspose2d(in_c, out_c, kernel_size=2,
-                               padding=0, stride=2, bias=False),
+            nn.ConvTranspose2d(
+                in_c, out_c, kernel_size=2, padding=0, stride=2, bias=False
+            ),
             nn.BatchNorm2d(out_c),
             nn.LeakyReLU(0.1, inplace=False),
-
         )
 
     def forward(self, x):
@@ -162,11 +171,9 @@ class down(nn.Module):
     def __init__(self, in_c, out_c, dp=0):
         super(down, self).__init__()
         self.down = nn.Sequential(
-            nn.Conv2d(in_c, out_c, kernel_size=2,
-                      padding=0, stride=2, bias=False),
+            nn.Conv2d(in_c, out_c, kernel_size=2, padding=0, stride=2, bias=False),
             nn.BatchNorm2d(out_c),
-            nn.LeakyReLU(0.1, inplace=True)
-
+            nn.LeakyReLU(0.1, inplace=True),
         )
 
     def forward(self, x):
@@ -179,9 +186,9 @@ class encoder(nn.Module):
         super(encoder, self).__init__()
 
         self.conv = conv(out_c, out_c, dp=dp)
-        self.down = down(out_c, out_c*2)
+        self.down = down(out_c, out_c * 2)
 
-    def forward(self,  x):
+    def forward(self, x):
         x = self.conv(x)
         x_down = self.down(x)
         return x, x_down
@@ -196,17 +203,17 @@ class decoder(nn.Module):
         assert self.fuse_n > 0 and self.fuse_n <= 4
         if self.fuse_n > 1:
             self.fuse = nn.Sequential(
-                nn.Conv2d(out_c*self.fuse_n, out_c, kernel_size=1, stride=1),
+                nn.Conv2d(out_c * self.fuse_n, out_c, kernel_size=1, stride=1),
                 nn.BatchNorm2d(out_c),
-                nn.LeakyReLU(0.1, inplace=True)
+                nn.LeakyReLU(0.1, inplace=True),
             )
         if self.is_CPAM is True:
             self.cpam = CPAM(out_c, 1)
         self.conv = conv(out_c, out_c, dp=dp)
         if is_up is True:
-            self.up = up(out_c, out_c//2)
+            self.up = up(out_c, out_c // 2)
 
-    def forward(self,  x):
+    def forward(self, x):
         if self.fuse_n >= 2:
             x = self.fuse(x)
 
@@ -228,69 +235,65 @@ class MAS(nn.Module):
         self.gamma3 = nn.Parameter(torch.zeros(1))
         self.gamma2 = nn.Parameter(torch.zeros(1))
         self.gamma1 = nn.Parameter(torch.zeros(1))
-        self.up4 = up(in_c, in_c//2)
-        self.up3 = up(in_c//2, in_c//4)
-        self.up2 = up(in_c//4, in_c//8)
+        self.up4 = up(in_c, in_c // 2)
+        self.up3 = up(in_c // 2, in_c // 4)
+        self.up2 = up(in_c // 4, in_c // 8)
         self.conv4 = nn.Sequential(
-
-            nn.Conv2d(in_c, in_c, kernel_size=3,
-                      padding=1, bias=False),
+            nn.Conv2d(in_c, in_c, kernel_size=3, padding=1, bias=False),
             nn.BatchNorm2d(in_c),
             nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
+            nn.LeakyReLU(0.1, inplace=True),
         )
         self.conv3 = nn.Sequential(
-
-            nn.Conv2d(in_c//2, in_c//2, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c//2),
+            nn.Conv2d(in_c // 2, in_c // 2, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(in_c // 2),
             nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
+            nn.LeakyReLU(0.1, inplace=True),
         )
-        self.sv3 = up(in_c//2, in_c//4)
+        self.sv3 = up(in_c // 2, in_c // 4)
         self.conv2 = nn.Sequential(
-
-            nn.Conv2d(in_c//4, in_c//4, kernel_size=3,
-                      padding=1, bias=False),
-            nn.BatchNorm2d(in_c//4),
+            nn.Conv2d(in_c // 4, in_c // 4, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(in_c // 4),
             nn.Dropout2d(dp),
-            nn.LeakyReLU(0.1, inplace=True)
+            nn.LeakyReLU(0.1, inplace=True),
         )
 
         self.conv1 = nn.Sequential(
-            nn.Conv2d(in_c//8, in_c//8, kernel_size=3,
-                      padding=1, stride=1, bias=False),
-            nn.BatchNorm2d(in_c//8),
+            nn.Conv2d(
+                in_c // 8, in_c // 8, kernel_size=3, padding=1, stride=1, bias=False
+            ),
+            nn.BatchNorm2d(in_c // 8),
             nn.LeakyReLU(0.1, inplace=True),
             nn.Dropout2d(dp),
-            nn.Conv2d(in_c//8, class_num, kernel_size=1,
-                      padding=0, stride=1, bias=True)
-
+            nn.Conv2d(
+                in_c // 8, class_num, kernel_size=1, padding=0, stride=1, bias=True
+            ),
         )
 
     def forward(self, x4, x3, x2, x1):
         x = self.conv4(x4)
-        x = self.up4(x)*self.gamma3 + x3
+        x = self.up4(x) * self.gamma3 + x3
         x = self.conv3(x)
-        x = self.up3(x)*self.gamma2+x2
+        x = self.up3(x) * self.gamma2 + x2
         x = self.conv2(x)
-        x = self.up2(x)*self.gamma1+x1
+        x = self.up2(x) * self.gamma1 + x1
         x = self.conv1(x)
         return x
 
 
 class MAA_Net(nn.Module):
-    def __init__(self,  num_classes=1, num_channels=1, feature_scale=2,  dropout=0.1):
+    def __init__(self, num_classes=1, num_channels=1, feature_scale=2, dropout=0.1):
         super(MAA_Net, self).__init__()
         # self.out_ave = out_ave
         filters = [64, 128, 256, 512]
         filters = [int(x / feature_scale) for x in filters]
 
         self.first_conv = nn.Sequential(
-            nn.Conv2d(num_channels, filters[0], kernel_size=1,
-                      padding=0, stride=1, bias=False),
+            nn.Conv2d(
+                num_channels, filters[0], kernel_size=1, padding=0, stride=1, bias=False
+            ),
             nn.BatchNorm2d(filters[0]),
-            nn.LeakyReLU(0.1, inplace=True)
+            nn.LeakyReLU(0.1, inplace=True),
         )
         self.encoder1 = encoder(filters[0], dp=dropout)
         self.encoder2 = encoder(filters[1], dp=dropout)
