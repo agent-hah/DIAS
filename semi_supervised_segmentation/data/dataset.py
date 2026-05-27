@@ -1,4 +1,17 @@
-from utils.data_augmentation import Compose, ToTensor, CropToFixed, HorizontalFlip, BlobsToMask, VerticalFlip, RandomRotate90, GaussianBlur3D, RandomContrast, AdditiveGaussianNoise, ElasticDeformation, Cutout
+from utils.data_augmentation import (
+    Compose,
+    ToTensor,
+    CropToFixed,
+    HorizontalFlip,
+    BlobsToMask,
+    VerticalFlip,
+    RandomRotate90,
+    GaussianBlur3D,
+    RandomContrast,
+    AdditiveGaussianNoise,
+    ElasticDeformation,
+    Cutout,
+)
 from skimage.transform import resize
 import torch.nn.functional as F
 import cv2
@@ -7,12 +20,14 @@ import torch
 from batchgenerators.utilities.file_and_folder_operations import *
 import numpy as np
 import sys
-import random 
+import random
+
 sys.path.append("..")
 
 cv2.setNumThreads(0)
 
 VAL_IMAGE_PATH = "d_data/DIAS/validation/images"
+
 
 class label_dataset(Dataset):
     def __init__(self, config, images_path, labels_path):
@@ -20,60 +35,67 @@ class label_dataset(Dataset):
         self.labels_path = labels_path
         self.size = config.DATASET.PATCH_SIZE
         self.num_each_epoch = config.DATASET.NUM_EACH_EPOCH
-        self.images, self.gts = self.read_image(
-            self.images_path, self.labels_path)
-        self.images = self.images[0:int(config.DATASET.NUM_LABEL)]
-        self.gts = self.gts[0:int(config.DATASET.NUM_LABEL)]
+        self.images, self.gts = self.read_image(self.images_path, self.labels_path)
+        self.images = self.images[0 : int(config.DATASET.NUM_LABEL)]
+        self.gts = self.gts[0 : int(config.DATASET.NUM_LABEL)]
         self.config = config
         seed = np.random.randint(123)
-        self.seq_DA = Compose([
-            CropToFixed(np.random.RandomState(seed), size=self.size),
-            HorizontalFlip(np.random.RandomState(seed)),
-            VerticalFlip(np.random.RandomState(seed)),
-            RandomRotate90(np.random.RandomState(seed)),
-            ToTensor(False)
-        ])
+        self.seq_DA = Compose(
+            [
+                CropToFixed(np.random.RandomState(seed), size=self.size),
+                HorizontalFlip(np.random.RandomState(seed)),
+                VerticalFlip(np.random.RandomState(seed)),
+                RandomRotate90(np.random.RandomState(seed)),
+                ToTensor(False),
+            ]
+        )
 
-        self.gt_DA = Compose([
-            CropToFixed(np.random.RandomState(seed), size=self.size),
-            HorizontalFlip(np.random.RandomState(seed)),
-            VerticalFlip(np.random.RandomState(seed)),
-            RandomRotate90(np.random.RandomState(seed)),
-            ToTensor(False)
-        ])
+        self.gt_DA = Compose(
+            [
+                CropToFixed(np.random.RandomState(seed), size=self.size),
+                HorizontalFlip(np.random.RandomState(seed)),
+                VerticalFlip(np.random.RandomState(seed)),
+                RandomRotate90(np.random.RandomState(seed)),
+                ToTensor(False),
+            ]
+        )
 
     def read_image(self, images_path, label_path):
         label_files = list(sorted(os.listdir(label_path)))
         images = []
         gts = []
         for i in range(len(label_files)):
-            if (images_path.endswith("/validation/images")):
+            if images_path.endswith("/validation/images"):
                 i = i + 30
-            elif (images_path.endswith("/test/images")):
+            elif images_path.endswith("/test/images"):
                 i = i + 40
-            elif (images_path.endswith("/unlabeled_DSA")):
+            elif images_path.endswith("/unlabeled_DSA"):
                 i = i + 60
             image_each_slice = []
             for j in range(8):
-                img = cv2.imread(os.path.join(
-                    images_path, f"image_s{i}_i{j}.png"), 0)
+                img = cv2.imread(os.path.join(images_path, f"image_s{i}_i{j}.png"), 0)
                 if img is not None:
                     image_each_slice.append(img)
                 else:
-                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
-            
+                    image_each_slice.append(
+                        np.zeros_like(image_each_slice[0])
+                        if image_each_slice
+                        else np.zeros((800, 800), dtype=np.uint8)
+                    )
+
             seq = np.array(image_each_slice)
             mn = seq.mean()
             std = seq.std()
             seq = (seq - mn) / (std + 1e-8)
             images.append(seq)
 
-            gt = cv2.imread(os.path.join(
-                label_path, f"label_s{i}.png"), 0)
+            gt = cv2.imread(os.path.join(label_path, f"label_s{i}.png"), 0)
             if gt is None:
-                ValueError(f"Label image for sample {i} not found at {os.path.join(label_path, f'label_s{i}.png')}")
+                ValueError(
+                    f"Label image for sample {i} not found at {os.path.join(label_path, f'label_s{i}.png')}"
+                )
             else:
-                gt = np.array(gt/255)[np.newaxis]
+                gt = np.array(gt / 255)[np.newaxis]
                 gts.append(gt)
 
         return images, gts
@@ -93,7 +115,15 @@ class label_dataset(Dataset):
 
 
 class train_all_dataset(label_dataset):
-    def __init__(self, config, images_path, labels_path, num_unlabel_images, unlabel_images_path, pseudo_images_path):
+    def __init__(
+        self,
+        config,
+        images_path,
+        labels_path,
+        num_unlabel_images,
+        unlabel_images_path,
+        pseudo_images_path,
+    ):
 
         self.images_path = images_path
         self.labels_path = labels_path
@@ -103,60 +133,69 @@ class train_all_dataset(label_dataset):
         self.size = config.DATASET.PATCH_SIZE
         self.num_each_epoch = config.DATASET.NUM_EACH_EPOCH
         self.epoch = config.TRAIN.EPOCHS
-        self.images, self.gts = self.read_image(
-            self.images_path, self.labels_path)
-        self.images = self.images[0:int(config.DATASET.NUM_LABEL)]
-        self.gts = self.gts[0:int(config.DATASET.NUM_LABEL)]
+        self.images, self.gts = self.read_image(self.images_path, self.labels_path)
+        self.images = self.images[0 : int(config.DATASET.NUM_LABEL)]
+        self.gts = self.gts[0 : int(config.DATASET.NUM_LABEL)]
         self.pl_images, self.pl_gts = self.read_image(
-            self.unlabel_images_path, self.pseudo_images_path)
+            self.unlabel_images_path, self.pseudo_images_path
+        )
         assert self.num_unlabel_images <= len(self.pl_images)
         # self.gts = self.read_label(self.labels_path)
         self.count = 0
         seed = np.random.randint(123)
-        self.seq_DA = Compose([
-            CropToFixed(np.random.RandomState(seed), size=self.size),
-            HorizontalFlip(np.random.RandomState(seed)),
-            VerticalFlip(np.random.RandomState(seed)),
-            RandomRotate90(np.random.RandomState(seed)),
-            ToTensor(False)
-        ])
+        self.seq_DA = Compose(
+            [
+                CropToFixed(np.random.RandomState(seed), size=self.size),
+                HorizontalFlip(np.random.RandomState(seed)),
+                VerticalFlip(np.random.RandomState(seed)),
+                RandomRotate90(np.random.RandomState(seed)),
+                ToTensor(False),
+            ]
+        )
 
-        self.gt_DA = Compose([
-            CropToFixed(np.random.RandomState(seed), size=self.size),
-            HorizontalFlip(np.random.RandomState(seed)),
-            VerticalFlip(np.random.RandomState(seed)),
-            RandomRotate90(np.random.RandomState(seed)),
-            ToTensor(False)
-        ])
+        self.gt_DA = Compose(
+            [
+                CropToFixed(np.random.RandomState(seed), size=self.size),
+                HorizontalFlip(np.random.RandomState(seed)),
+                VerticalFlip(np.random.RandomState(seed)),
+                RandomRotate90(np.random.RandomState(seed)),
+                ToTensor(False),
+            ]
+        )
 
-        self.strong_seq_DA = Compose([
-            CropToFixed(np.random.RandomState(seed), size=self.size),
-            HorizontalFlip(np.random.RandomState(seed)),
-            VerticalFlip(np.random.RandomState(seed)),
-            RandomRotate90(np.random.RandomState(seed)),
-            RandomContrast(np.random.RandomState(
-                seed), execution_probability=0.5),
-            ElasticDeformation(np.random.RandomState(seed), spline_order=3),
-            Cutout(np.random.RandomState(seed)),
-            GaussianBlur3D(execution_probability=0.5),
-            AdditiveGaussianNoise(np.random.RandomState(
-                seed), scale=(0., 0.1), execution_probability=0.1),
-            ToTensor(False)
-        ])
-        self.strong_gt_DA = Compose([
-            CropToFixed(np.random.RandomState(seed), size=self.size),
-            HorizontalFlip(np.random.RandomState(seed)),
-            VerticalFlip(np.random.RandomState(seed)),
-            RandomRotate90(np.random.RandomState(seed)),
-            ElasticDeformation(np.random.RandomState(seed), spline_order=1),
-            BlobsToMask(),
-            ToTensor(False)
-        ])
+        self.strong_seq_DA = Compose(
+            [
+                CropToFixed(np.random.RandomState(seed), size=self.size),
+                HorizontalFlip(np.random.RandomState(seed)),
+                VerticalFlip(np.random.RandomState(seed)),
+                RandomRotate90(np.random.RandomState(seed)),
+                RandomContrast(np.random.RandomState(seed), execution_probability=0.5),
+                ElasticDeformation(np.random.RandomState(seed), spline_order=3),
+                Cutout(np.random.RandomState(seed)),
+                GaussianBlur3D(execution_probability=0.5),
+                AdditiveGaussianNoise(
+                    np.random.RandomState(seed),
+                    scale=(0.0, 0.1),
+                    execution_probability=0.1,
+                ),
+                ToTensor(False),
+            ]
+        )
+        self.strong_gt_DA = Compose(
+            [
+                CropToFixed(np.random.RandomState(seed), size=self.size),
+                HorizontalFlip(np.random.RandomState(seed)),
+                VerticalFlip(np.random.RandomState(seed)),
+                RandomRotate90(np.random.RandomState(seed)),
+                ElasticDeformation(np.random.RandomState(seed), spline_order=1),
+                BlobsToMask(),
+                ToTensor(False),
+            ]
+        )
 
     def __getitem__(self, idx):
 
         if random.random() < 0.5:
-
             id = random.randint(0, len(self.images) - 1)
             img = self.images[id]
             gt = self.gts[id]
@@ -168,10 +207,10 @@ class train_all_dataset(label_dataset):
             img = self.pl_images[id]
             gt = self.pl_gts[id]
 
-            img = self.seq_DA(img)
-            gt = self.gt_DA(gt)
-            # img = self.strong_seq_DA(img)
-            # gt = self.strong_gt_DA(gt)
+            # img = self.seq_DA(img)
+            # gt = self.gt_DA(gt)
+            img = self.strong_seq_DA(img)
+            gt = self.strong_gt_DA(gt)
 
         return img, gt.long()
 
@@ -186,10 +225,8 @@ class test_dataset(label_dataset):
         self.patch_size = config.DATASET.PATCH_SIZE
         self.stride = config.DATASET.STRIDE
 
-        self.images, self.gts = self.read_image(
-            self.images_path, self.labels_path)
-        self.img_patch = self.get_patch(
-            self.images, self.patch_size, self.stride)
+        self.images, self.gts = self.read_image(self.images_path, self.labels_path)
+        self.img_patch = self.get_patch(self.images, self.patch_size, self.stride)
         self.gt_patch = self.get_patch(self.gts, self.patch_size, self.stride)
 
     def get_patch(self, image_list, patch_size, stride):
@@ -199,12 +236,20 @@ class test_dataset(label_dataset):
         pad_h = stride - (h - patch_size[0]) % stride
         pad_w = stride - (w - patch_size[1]) % stride
         for image in image_list:
-            image = F.pad(torch.from_numpy(image).float(),
-                          (0, pad_w, 0, pad_h), "constant", 0)
-            image = image.unfold(1, patch_size[0], stride).unfold(
-                2, patch_size[1], stride).permute(1, 2, 0, 3, 4)
+            image = F.pad(
+                torch.from_numpy(image).float(), (0, pad_w, 0, pad_h), "constant", 0
+            )
+            image = (
+                image.unfold(1, patch_size[0], stride)
+                .unfold(2, patch_size[1], stride)
+                .permute(1, 2, 0, 3, 4)
+            )
             image = image.contiguous().view(
-                image.shape[0] * image.shape[1], image.shape[2], patch_size[0], patch_size[1])
+                image.shape[0] * image.shape[1],
+                image.shape[2],
+                patch_size[0],
+                patch_size[1],
+            )
             for sub in image:
                 patch_list.append(sub)
         return patch_list
@@ -226,27 +271,29 @@ class inference_dataset(test_dataset):
         self.stride = config.DATASET.STRIDE
 
         self.images = self.read_image(self.images_path)
-        self.img_patch = self.get_patch(
-            self.images, self.patch_size, self.stride)
+        self.img_patch = self.get_patch(self.images, self.patch_size, self.stride)
 
-    def read_image(self, images_path): # type: ignore
+    def read_image(self, images_path):  # type: ignore
         num_files = list(sorted(os.listdir(images_path)))
         images = []
-        for i in range(len(num_files)//8):
-            if (images_path.endswith("/validation/images")):
+        for i in range(len(num_files) // 8):
+            if images_path.endswith("/validation/images"):
                 i = i + 30
-            elif (images_path.endswith("/test/images")):
+            elif images_path.endswith("/test/images"):
                 i = i + 40
-            elif (images_path.endswith("/unlabeled_DSA")):
+            elif images_path.endswith("/unlabeled_DSA"):
                 i = i + 60
             image_each_slice = []
             for j in range(8):
-                img = cv2.imread(os.path.join(
-                    images_path, f"image_s{i}_i{j}.png"), 0)
+                img = cv2.imread(os.path.join(images_path, f"image_s{i}_i{j}.png"), 0)
                 if img is not None:
                     image_each_slice.append(img)
                 else:
-                    image_each_slice.append(np.zeros_like(image_each_slice[0]) if image_each_slice else np.zeros((800, 800), dtype=np.uint8))
+                    image_each_slice.append(
+                        np.zeros_like(image_each_slice[0])
+                        if image_each_slice
+                        else np.zeros((800, 800), dtype=np.uint8)
+                    )
             seq = np.array(image_each_slice)
             mn = seq.mean()
             std = seq.std()
@@ -262,12 +309,20 @@ class inference_dataset(test_dataset):
         pad_h = stride - (h - patch_size[0]) % stride
         pad_w = stride - (w - patch_size[1]) % stride
         for image in image_list:
-            image = F.pad(torch.from_numpy(image).float(),
-                          (0, pad_w, 0, pad_h), "constant", 0)
-            image = image.unfold(1, patch_size[0], stride).unfold(
-                2, patch_size[1], stride).permute(1, 2, 0, 3, 4)
+            image = F.pad(
+                torch.from_numpy(image).float(), (0, pad_w, 0, pad_h), "constant", 0
+            )
+            image = (
+                image.unfold(1, patch_size[0], stride)
+                .unfold(2, patch_size[1], stride)
+                .permute(1, 2, 0, 3, 4)
+            )
             image = image.contiguous().view(
-                image.shape[0] * image.shape[1], image.shape[2], patch_size[0], patch_size[1])
+                image.shape[0] * image.shape[1],
+                image.shape[2],
+                patch_size[0],
+                patch_size[1],
+            )
             for sub in image:
                 patch_list.append(sub)
         return patch_list
