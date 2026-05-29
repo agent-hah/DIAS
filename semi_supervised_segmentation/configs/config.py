@@ -4,8 +4,8 @@ from yacs.config import CfgNode as CN
 
 _C = CN()
 # Base config files
-_C.BASE = ['']
-_C.ITE = 1
+_C.BASE = [""]
+_C.ITE = 3
 _C.DIS = False
 _C.WORLD_SIZE = 1
 _C.SEED = 1234
@@ -31,6 +31,7 @@ _C.DATASET.TEST_IMAGE_PATH = "d_data/DIAS/test/images"
 _C.DATASET.TEST_LABEL_PATH = "d_data/DIAS/test/labels"
 _C.DATASET.NUM_LABEL = 1
 _C.DATASET.NUM_UNLABEL = 30
+_C.DATASET.USE_SDA = False
 _C.DATASET.STRIDE = 32
 _C.DATASET.PATCH_SIZE = (64, 64)
 _C.DATASET.NUM_EACH_EPOCH = 40000
@@ -54,7 +55,7 @@ _C.TRAIN.MNT_MODE = "max"
 _C.TRAIN.MNT_METRIC = "AUC"
 _C.TRAIN.EARLY_STOPPING = 100
 
-_C.TRAIN.EPOCHS = 10
+_C.TRAIN.EPOCHS = 100
 _C.TRAIN.WEIGHT_DECAY = 0.01
 _C.TRAIN.WARMUP_EPOCHS = 10
 _C.TRAIN.BASE_LR = 5e-4
@@ -62,7 +63,7 @@ _C.TRAIN.WARMUP_LR = 5e-7
 _C.TRAIN.MIN_LR = 5e-6
 # LR scheduler
 _C.TRAIN.LR_SCHEDULER = CN()
-_C.TRAIN.LR_SCHEDULER.NAME = 'cosine'
+_C.TRAIN.LR_SCHEDULER.NAME = "cosine"
 
 # Epoch interval to decay LR, used in StepLRScheduler
 _C.TRAIN.LR_SCHEDULER.DECAY_EPOCHS = 30
@@ -71,7 +72,7 @@ _C.TRAIN.LR_SCHEDULER.DECAY_RATE = 0.1
 
 # Optimizer
 _C.TRAIN.OPTIMIZER = CN()
-_C.TRAIN.OPTIMIZER.NAME = 'adamw'
+_C.TRAIN.OPTIMIZER.NAME = "adamw"
 # Optimizer Epsilon
 _C.TRAIN.OPTIMIZER.EPS = 1e-8
 # Optimizer Betas
@@ -84,15 +85,15 @@ _C.VAL = CN()
 
 def _update_config_from_file(config, cfg_file):
     config.defrost()
-    with open(cfg_file, 'r') as f:
+    with open(cfg_file, "r") as f:
         yaml_cfg = yaml.load(f, Loader=yaml.FullLoader)
 
-    for cfg in yaml_cfg.setdefault('BASE', ['']):
+    for cfg in yaml_cfg.setdefault("BASE", [""]):
         if cfg:
             _update_config_from_file(
                 config, os.path.join(os.path.dirname(cfg_file), cfg)
             )
-    print('=> merge config from {}'.format(cfg_file))
+    print("=> merge config from {}".format(cfg_file))
     config.merge_from_file(cfg_file)
     config.freeze()
 
@@ -124,7 +125,8 @@ def update_config(config, args):
         config.DATASET.NUM_UNLABEL = args.num_unlabel
     if args.enable_distributed:
         config.DIS = True
-
+    if hasattr(args, "SDA") and args.SDA:
+        config.DATASET.USE_SDA = True
     config.freeze()
 
 

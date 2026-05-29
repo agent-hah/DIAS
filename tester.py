@@ -46,7 +46,7 @@ class Tester(Trainer):
 
                 if not self.is_2d:
                     img = img.unsqueeze(1)
-                with torch.cuda.amp.autocast(enabled=self.config.AMP):
+                with torch.amp.autocast("cuda", enabled=self.config.AMP):
                     # with torch.cuda.amp.autocast(enabled=False):
                     pre = self.model(img)
 
@@ -164,4 +164,3 @@ class Tester(Trainer):
             label_list.append(gt)
 
         return label_list
-

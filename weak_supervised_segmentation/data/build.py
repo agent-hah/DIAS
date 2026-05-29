@@ -6,22 +6,21 @@ import torch
 
 
 class DataLoaderX(DataLoader):
-    def __iter__(self):  # type: ignore  
-        return BackgroundGenerator(super().__iter__()) 
+    def __iter__(self):  # type: ignore
+        return BackgroundGenerator(super().__iter__())
 
 
 def build_train_loader(config):
-    if config.SCRIBBLE_TYPE == "scribble":
-        labels_path = config.DATASET.SCRIBBLE_LABEL_PATH
-    elif config.SCRIBBLE_TYPE == "manual":
-        labels_path = config.DATASET.MANUAL_LABEL_PATH
+    if config.SCRIBBLE_TYPE in {"RDFA", "SALE"}:
+        labels_path = f"d_data/DIAS/training/scribble_labels/{config.SCRIBBLE_TYPE}"
     else:
         raise NotImplementedError(f"Unknown param: {config.SCRIBBLE_TYPE}")
-
     train_dataset = Train_dataset(
-        config, images_path=config.DATASET.TRAIN_IMAGE_PATH, labels_path=labels_path)
-    train_sampler = DistributedSampler(
-        train_dataset, shuffle=True) if config.DIS else None
+        config, images_path=config.DATASET.TRAIN_IMAGE_PATH, labels_path=labels_path
+    )
+    train_sampler = (
+        DistributedSampler(train_dataset, shuffle=True) if config.DIS else None
+    )
     train_loader = DataLoaderX(
         train_dataset,
         sampler=train_sampler,
@@ -29,12 +28,14 @@ def build_train_loader(config):
         num_workers=config.DATALOADER.NUM_WORKERS,
         pin_memory=config.DATALOADER.PIN_MEMORY,
         shuffle=True if train_sampler is None else False,
-        drop_last=True
+        drop_last=True,
     )
     val_dataset = Test_dataset(
-        config, images_path=config.DATASET.VAL_IMAGE_PATH, labels_path=config.DATASET.VAL_LABEL_PATH)
-    val_sampler = DistributedSampler(
-        val_dataset) if config.DIS else None
+        config,
+        images_path=config.DATASET.VAL_IMAGE_PATH,
+        labels_path=config.DATASET.VAL_LABEL_PATH,
+    )
+    val_sampler = DistributedSampler(val_dataset) if config.DIS else None
     val_loader = DataLoaderX(
         dataset=val_dataset,
         sampler=val_sampler,
@@ -43,24 +44,26 @@ def build_train_loader(config):
         num_workers=config.DATALOADER.NUM_WORKERS,
         pin_memory=config.DATALOADER.PIN_MEMORY,
         shuffle=True,
-        drop_last=False
+        drop_last=False,
     )
 
     return train_loader, val_loader
 
 
 def build_PLC_train_loader(config):
-    if config.SCRIBBLE_TYPE == "scribble":
-        labels_path = config.DATASET.SCRIBBLE_LABEL_PATH
-    elif config.SCRIBBLE_TYPE == "manual":
-        labels_path = config.DATASET.MANUAL_LABEL_PATH
+    if config.SCRIBBLE_TYPE in ["RDFA", "SALE"]:
+        labels_path = f"d_data/DIAS/training/scribble_labels/{config.SCRIBBLE_TYPE}"
     else:
-        raise NotImplementedError(f"Unknown param: {config.SCRIBBLE_TYPE}")
+        raise NotImplementedError(
+            f"Unknown param: {config.SCRIBBLE_TYPE}. Please use 'RDFA' or 'SALE'."
+        )
 
     train_dataset = PLC_Train_dataset(
-        config, images_path=config.DATASET.TRAIN_IMAGE_PATH, labels_path=labels_path)
-    train_sampler = DistributedSampler(
-        train_dataset, shuffle=True) if config.DIS else None
+        config, images_path=config.DATASET.TRAIN_IMAGE_PATH, labels_path=labels_path
+    )
+    train_sampler = (
+        DistributedSampler(train_dataset, shuffle=True) if config.DIS else None
+    )
     train_loader = DataLoaderX(
         train_dataset,
         sampler=train_sampler,
@@ -68,12 +71,14 @@ def build_PLC_train_loader(config):
         num_workers=config.DATALOADER.NUM_WORKERS,
         pin_memory=config.DATALOADER.PIN_MEMORY,
         shuffle=True if train_sampler is None else False,
-        drop_last=True
+        drop_last=True,
     )
     val_dataset = Test_dataset(
-        config, images_path=config.DATASET.VAL_IMAGE_PATH, labels_path=config.DATASET.VAL_LABEL_PATH)
-    val_sampler = DistributedSampler(
-        val_dataset) if config.DIS else None
+        config,
+        images_path=config.DATASET.VAL_IMAGE_PATH,
+        labels_path=config.DATASET.VAL_LABEL_PATH,
+    )
+    val_sampler = DistributedSampler(val_dataset) if config.DIS else None
     val_loader = DataLoaderX(
         dataset=val_dataset,
         sampler=val_sampler,
@@ -81,7 +86,7 @@ def build_PLC_train_loader(config):
         num_workers=config.DATALOADER.NUM_WORKERS,
         pin_memory=config.DATALOADER.PIN_MEMORY,
         shuffle=True,
-        drop_last=False
+        drop_last=False,
     )
 
     return train_loader, val_loader
@@ -89,7 +94,10 @@ def build_PLC_train_loader(config):
 
 def build_test_loader(config):
     test_dataset = Test_dataset(
-        config, images_path=config.DATASET.TEST_IMAGE_PATH, labels_path=config.DATASET.TEST_LABEL_PATH)
+        config,
+        images_path=config.DATASET.TEST_IMAGE_PATH,
+        labels_path=config.DATASET.TEST_LABEL_PATH,
+    )
 
     test_loader = DataLoaderX(
         test_dataset,
@@ -97,6 +105,6 @@ def build_test_loader(config):
         num_workers=config.DATALOADER.NUM_WORKERS,
         pin_memory=config.DATALOADER.PIN_MEMORY,
         shuffle=False,
-        drop_last=False
+        drop_last=False,
     )
     return test_loader

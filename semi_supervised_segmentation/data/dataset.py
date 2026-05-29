@@ -29,6 +29,61 @@ cv2.setNumThreads(0)
 VAL_IMAGE_PATH = "d_data/DIAS/validation/images"
 
 
+def get_weak_augmentations(seed, size):
+    seq_DA = Compose(
+        [
+            CropToFixed(np.random.RandomState(seed), size=size),
+            HorizontalFlip(np.random.RandomState(seed)),
+            VerticalFlip(np.random.RandomState(seed)),
+            RandomRotate90(np.random.RandomState(seed)),
+            ToTensor(False),
+        ]
+    )
+
+    gt_DA = Compose(
+        [
+            CropToFixed(np.random.RandomState(seed), size=size),
+            HorizontalFlip(np.random.RandomState(seed)),
+            VerticalFlip(np.random.RandomState(seed)),
+            RandomRotate90(np.random.RandomState(seed)),
+            ToTensor(False),
+        ]
+    )
+    return seq_DA, gt_DA
+
+
+def get_strong_augmentations(seed, size):
+    strong_seq_DA = Compose(
+        [
+            CropToFixed(np.random.RandomState(seed), size=size),
+            HorizontalFlip(np.random.RandomState(seed)),
+            VerticalFlip(np.random.RandomState(seed)),
+            RandomRotate90(np.random.RandomState(seed)),
+            RandomContrast(np.random.RandomState(seed), execution_probability=0.5),
+            ElasticDeformation(np.random.RandomState(seed), spline_order=3),
+            Cutout(np.random.RandomState(seed)),
+            GaussianBlur3D(execution_probability=0.5),
+            AdditiveGaussianNoise(
+                np.random.RandomState(seed), scale=(0.0, 0.1), execution_probability=0.1
+            ),
+            ToTensor(False),
+        ]
+    )
+
+    strong_gt_DA = Compose(
+        [
+            CropToFixed(np.random.RandomState(seed), size=size),
+            HorizontalFlip(np.random.RandomState(seed)),
+            VerticalFlip(np.random.RandomState(seed)),
+            RandomRotate90(np.random.RandomState(seed)),
+            ElasticDeformation(np.random.RandomState(seed), spline_order=1),
+            BlobsToMask(),
+            ToTensor(False),
+        ]
+    )
+    return strong_seq_DA, strong_gt_DA
+
+
 class label_dataset(Dataset):
     def __init__(self, config, images_path, labels_path):
         self.images_path = images_path
@@ -40,25 +95,10 @@ class label_dataset(Dataset):
         self.gts = self.gts[0 : int(config.DATASET.NUM_LABEL)]
         self.config = config
         seed = np.random.randint(123)
-        self.seq_DA = Compose(
-            [
-                CropToFixed(np.random.RandomState(seed), size=self.size),
-                HorizontalFlip(np.random.RandomState(seed)),
-                VerticalFlip(np.random.RandomState(seed)),
-                RandomRotate90(np.random.RandomState(seed)),
-                ToTensor(False),
-            ]
-        )
-
-        self.gt_DA = Compose(
-            [
-                CropToFixed(np.random.RandomState(seed), size=self.size),
-                HorizontalFlip(np.random.RandomState(seed)),
-                VerticalFlip(np.random.RandomState(seed)),
-                RandomRotate90(np.random.RandomState(seed)),
-                ToTensor(False),
-            ]
-        )
+        if getattr(config.DATASET, "USE_SDA", False):
+            self.seq_DA, self.gt_DA = get_strong_augmentations(seed, self.size)
+        else:
+            self.seq_DA, self.gt_DA = get_weak_augmentations(seed, self.size)
 
     def read_image(self, images_path, label_path):
         label_files = list(sorted(os.listdir(label_path)))
@@ -143,55 +183,17 @@ class train_all_dataset(label_dataset):
         # self.gts = self.read_label(self.labels_path)
         self.count = 0
         seed = np.random.randint(123)
-        self.seq_DA = Compose(
-            [
-                CropToFixed(np.random.RandomState(seed), size=self.size),
-                HorizontalFlip(np.random.RandomState(seed)),
-                VerticalFlip(np.random.RandomState(seed)),
-                RandomRotate90(np.random.RandomState(seed)),
-                ToTensor(False),
-            ]
-        )
 
-        self.gt_DA = Compose(
-            [
-                CropToFixed(np.random.RandomState(seed), size=self.size),
-                HorizontalFlip(np.random.RandomState(seed)),
-                VerticalFlip(np.random.RandomState(seed)),
-                RandomRotate90(np.random.RandomState(seed)),
-                ToTensor(False),
-            ]
-        )
-
-        self.strong_seq_DA = Compose(
-            [
-                CropToFixed(np.random.RandomState(seed), size=self.size),
-                HorizontalFlip(np.random.RandomState(seed)),
-                VerticalFlip(np.random.RandomState(seed)),
-                RandomRotate90(np.random.RandomState(seed)),
-                RandomContrast(np.random.RandomState(seed), execution_probability=0.5),
-                ElasticDeformation(np.random.RandomState(seed), spline_order=3),
-                Cutout(np.random.RandomState(seed)),
-                GaussianBlur3D(execution_probability=0.5),
-                AdditiveGaussianNoise(
-                    np.random.RandomState(seed),
-                    scale=(0.0, 0.1),
-                    execution_probability=0.1,
-                ),
-                ToTensor(False),
-            ]
-        )
-        self.strong_gt_DA = Compose(
-            [
-                CropToFixed(np.random.RandomState(seed), size=self.size),
-                HorizontalFlip(np.random.RandomState(seed)),
-                VerticalFlip(np.random.RandomState(seed)),
-                RandomRotate90(np.random.RandomState(seed)),
-                ElasticDeformation(np.random.RandomState(seed), spline_order=1),
-                BlobsToMask(),
-                ToTensor(False),
-            ]
-        )
+        if getattr(config.DATASET, "USE_SDA", False):
+            self.seq_DA, self.gt_DA = get_strong_augmentations(seed, self.size)
+            self.strong_seq_DA, self.strong_gt_DA = get_strong_augmentations(
+                seed, self.size
+            )
+        else:
+            self.seq_DA, self.gt_DA = get_weak_augmentations(seed, self.size)
+            self.strong_seq_DA, self.strong_gt_DA = get_weak_augmentations(
+                seed, self.size
+            )
 
     def __getitem__(self, idx):
 

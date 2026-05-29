@@ -21,10 +21,12 @@ class Trainer:
         loss,
         optimizer,
         lr_scheduler,
+        start_epoch=1,
+        mnt_best=None,
     ):
         self.config = config
 
-        self.scaler = torch.cuda.amp.GradScaler(enabled=True)
+        self.scaler = torch.amp.GradScaler("cuda", enabled=True)
         self.loss = loss
         self.model = model
         self.is_2d = is_2d
@@ -33,18 +35,26 @@ class Trainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.num_steps = len(self.train_loader)
+        self.start_epoch = start_epoch
+
         if self._get_rank() == 0:
             self.checkpoint_dir = os.path.join(config.SAVE_DIR, config.EXPERIMENT_ID)
 
-            os.makedirs(self.checkpoint_dir)
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
+
         # MONITORING
         self.improved = True
         self.not_improved_count = 0
-        self.mnt_best = -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+        if mnt_best is not None:
+            self.mnt_best = mnt_best
+        else:
+            self.mnt_best = (
+                -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+            )
 
     def train(self):
 
-        for epoch in range(1, self.config.TRAIN.EPOCHS + 1):
+        for epoch in range(self.start_epoch, self.config.TRAIN.EPOCHS + 1):
             if self.config.DIS:
                 self.train_loader.sampler.set_epoch(epoch)
 
@@ -98,7 +108,7 @@ class Trainer:
         self.model.train()
 
         self._reset_metrics()
-        tbar = tqdm(self.train_loader, ncols=160)
+        tbar = tqdm(self.train_loader, dynamic_ncols=True)
         tic = time.time()
 
         for idx, (img, gt) in enumerate(tbar):
@@ -118,7 +128,7 @@ class Trainer:
                 gt = gt.unsqueeze(1)
 
             self.optimizer.zero_grad()
-            with torch.cuda.amp.autocast(enabled=self.config.AMP):
+            with torch.amp.autocast("cuda", enabled=self.config.AMP):
                 pre = self.model(img)
                 loss = self.loss(pre, gt)
             if self.config.AMP:
@@ -165,7 +175,7 @@ class Trainer:
         self.model.eval()
         wrt_mode = "val"
         self._reset_metrics()
-        tbar = tqdm(self.val_loader, ncols=160)
+        tbar = tqdm(self.val_loader, dynamic_ncols=True)
         with torch.no_grad():
             for idx, (img, gt) in enumerate(tbar):
                 # Convert to PyTorch tensors and move to GPU
@@ -178,7 +188,7 @@ class Trainer:
                 if not self.is_2d:
                     img = img.unsqueeze(1)
 
-                with torch.cuda.amp.autocast(enabled=self.config.AMP):
+                with torch.amp.autocast("cuda", enabled=self.config.AMP):
                     predict = self.model(img)
 
                     # Match gt dimensions to model output (pre) instead of input (img)

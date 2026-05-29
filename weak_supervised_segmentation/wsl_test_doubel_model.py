@@ -29,7 +29,9 @@ import pandas as pd
 
 
 class Tester(Trainer):
-    def __init__(self, config, test_loader, model1, model2,is_2d, save_dir, model_name):
+    def __init__(
+        self, config, test_loader, model1, model2, is_2d, save_dir, model_name
+    ):
         self.config = config
         self.test_loader = test_loader
         self.is_2d = is_2d
@@ -47,30 +49,31 @@ class Tester(Trainer):
     def test(self):
         self.model1.eval()
         self.model2.eval()
-        
+
         self._reset_metrics()
-        self.VC=AverageMeter()
+        self.VC = AverageMeter()
         gts = self.get_labels()
-        
+
         tbar = tqdm(self.test_loader, ncols=150)
-        
+
         pres = []
         with torch.no_grad():
-
             for img, _ in tbar:
                 img = to_cuda(img)
                 img = torch.as_tensor(img)
                 if not self.is_2d:
                     img = img.unsqueeze(1)
-                   
-                with torch.cuda.amp.autocast(enabled=self.config.AMP):
+
+                with torch.amp.autocast("cuda", enabled=self.config.AMP):
                     pre1 = self.model1(img)
                     pre2 = self.model2(img)
 
-                pre1 = torch.softmax(pre1[:, :self.config.DATASET.NUM_CLASSES], dim=1)[
-                    :, 1, :, :]
-                pre2 = torch.softmax(pre2[:, :self.config.DATASET.NUM_CLASSES], dim=1)[
-                    :, 1, :, :]
+                pre1 = torch.softmax(pre1[:, : self.config.DATASET.NUM_CLASSES], dim=1)[
+                    :, 1, :, :
+                ]
+                pre2 = torch.softmax(pre2[:, : self.config.DATASET.NUM_CLASSES], dim=1)[
+                    :, 1, :, :
+                ]
                 # pre = (pre1+pre2)/2
                 pre = pre1
                 pres.extend(pre)
@@ -83,24 +86,38 @@ class Tester(Trainer):
         pad_w = self.stride - (W - self.patch_size[1]) % self.stride
         new_h = H + pad_h
         new_w = W + pad_w
-        pres = recompone_overlap(np.expand_dims(pres.cpu().detach().numpy(
-        ), axis=1), new_h, new_w, self.stride, self.stride)  # predictions
+        pres = recompone_overlap(
+            np.expand_dims(pres.cpu().detach().numpy(), axis=1),
+            new_h,
+            new_w,
+            self.stride,
+            self.stride,
+        )  # predictions
 
         predict = pres[:, 0, 0:H, 0:W]
         predict_b = np.where(predict >= 0.5, 1, 0)
         for j in range(num_data):
+            cv2.imwrite(
+                os.path.join(self.save_path, f"gt{j}.png"),
+                (np.squeeze(gts[j]) * 255).astype(np.uint8),
+            )
+            cv2.imwrite(
+                os.path.join(self.save_path, f"pre{j}.png"),
+                (np.squeeze(predict[j]) * 255).astype(np.uint8),
+            )
+            cv2.imwrite(
+                os.path.join(self.save_path, f"pre_b{j}.png"),
+                (np.squeeze(predict_b[j]) * 255).astype(np.uint8),
+            )
+            cv2.imwrite(
+                self.save_path + f"/color_b{j}.png",
+                get_color(predict_b[j], gts[j]).astype(np.uint8),
+            )
 
-            cv2.imwrite(os.path.join(self.save_path, f"gt{j}.png"), (np.squeeze(gts[j])*255).astype(np.uint8))
-            cv2.imwrite(os.path.join(self.save_path, f"pre{j}.png"), (np.squeeze(predict[j])*255).astype(np.uint8))
-            cv2.imwrite(os.path.join(self.save_path, f"pre_b{j}.png"), (np.squeeze(predict_b[j])*255).astype(np.uint8))
-            cv2.imwrite(self.save_path + f"/color_b{j}.png", get_color(predict_b[j],gts[j]).astype(np.uint8))
-            
-            self._update_metrics(**get_metrics(predict[j], gts[j],run_clDice= True))
+            self._update_metrics(**get_metrics(predict[j], gts[j], run_clDice=True))
             self.VC.update(count_connect_component(predict_b[j], gts[j]))
 
-        
-                
-            # tic = time.time()    
+            # tic = time.time()
 
         mean_data = list(self._get_metrics_mean().values())
         std_data = list(self._get_metrics_std().values())
@@ -109,8 +126,9 @@ class Tester(Trainer):
         columns = list(self._get_metrics_mean().keys())
         columns.append("VC")
 
-
-        formatted_data = [rf"{mean}$\pm${std}" for mean, std in zip(mean_data, std_data)] # type: ignore
+        formatted_data = [
+            rf"{mean}$\pm${std}" for mean, std in zip(mean_data, std_data)
+        ]  # type: ignore
 
         # 创建一个字典，用于构造DataFrame
         data_dict = {col: [val] for col, val in zip(columns, formatted_data)}
@@ -119,46 +137,48 @@ class Tester(Trainer):
         df = pd.DataFrame(data_dict)
         df.to_csv(join(self.save_path, f"{self.model_name}_result.csv"))
         for k, v in self._get_metrics_mean().items():
-            logger.info(f'{str(k):5s} (Mean) : {v}')
+            logger.info(f"{str(k):5s} (Mean) : {v}")
 
         for k, v in self._get_metrics_std().items():
-            logger.info(f'{str(k):5s} (Std)  : {v}')
-        
-        logger.info(f'VC_mean: {self.VC.mean}')
-       
-        logger.info(f'VC_std: {self.VC.std}')
-    
+            logger.info(f"{str(k):5s} (Std)  : {v}")
+
+        logger.info(f"VC_mean: {self.VC.mean}")
+
+        logger.info(f"VC_std: {self.VC.std}")
+
     def get_labels(self):
         # This gets the actual list of filenames (e.g., ['mask1.png', 'mask2.png'])
-        labels = subfiles(self.labels_path, join=False, suffix='png')
+        labels = subfiles(self.labels_path, join=False, suffix="png")
         label_list = []
-        
+
         for label_name in labels:
             # Construct the path using the REAL filename, not a hardcoded guess
             img_path = os.path.join(self.labels_path, label_name)
             gt = cv2.imread(img_path, 0)
-            
+
             # Safety check: If OpenCV still can't read it, stop and tell us why!
             if gt is None:
-                raise FileNotFoundError(f"OpenCV could not read the image at: {img_path}. Check if the file is corrupted or the path is wrong.")
-                
-            gt = np.array(gt / 255.0) # (Added .0 to ensure float division!)
+                raise FileNotFoundError(
+                    f"OpenCV could not read the image at: {img_path}. Check if the file is corrupted or the path is wrong."
+                )
+
+            gt = np.array(gt / 255.0)  # (Added .0 to ensure float division!)
             label_list.append(gt)
         return label_list
 
 
 def parse_option():
     parser = argparse.ArgumentParser("DIAS_WSL_test")
-    parser.add_argument('--cfg', type=str, metavar="FILE",
-                        help='path to config file')
+    parser.add_argument("--cfg", type=str, metavar="FILE", help="path to config file")
     parser.add_argument(
         "--opts",
         help="Modify config options by adding 'KEY VALUE' pairs. ",
         default=None,
-        nargs='+',
+        nargs="+",
     )
-    parser.add_argument('-mp', '--model_path', type=str,
-                        default=None, help='path to model.pth')
+    parser.add_argument(
+        "-mp", "--model_path", type=str, default=None, help="path to model.pth"
+    )
     args = parser.parse_args()
     config = get_val_config(args)
 
@@ -166,32 +186,40 @@ def parse_option():
 
 
 def main(config):
-    save_dir = config.MODEL_PATH.split(
-        '/')[-2]+"/"+config.MODEL_PATH.split('/')[-1]
-    np.set_printoptions(formatter={'float': '{: 0.4f}'.format}, suppress=True)
+    save_dir = config.MODEL_PATH.split("/")[-2] + "/" + config.MODEL_PATH.split("/")[-1]
+    np.set_printoptions(formatter={"float": "{: 0.4f}".format}, suppress=True)
     test_loader = build_test_loader(config)
 
     model_checkpoint = load_checkpoint(config.MODEL_PATH, False)
     config_chk = model_checkpoint["config"]
     model_name = config_chk.MODEL.TYPE
-    model1,is_2d = build_wsl_model(config_chk)
-    model2,_ = build_wsl_model(config_chk)
-    model1.load_state_dict({k.replace('module.', ''): v for k,
-                            v in model_checkpoint['state_dict1'].items()})
-    model2.load_state_dict({k.replace('module.', ''): v for k,
-                            v in model_checkpoint['state_dict2'].items()})
-    logger.info(f'\n{model1}\n')
-    tester = Tester(config=config,
-                    test_loader=test_loader,
-                    model1=model1.eval().cuda(),
-                    model2=model2.eval().cuda(),
-                    is_2d= is_2d,
-                    save_dir=save_dir,
-                    model_name=model_name)
+    model1, is_2d = build_wsl_model(config_chk)
+    model2, _ = build_wsl_model(config_chk)
+    model1.load_state_dict(
+        {
+            k.replace("module.", ""): v
+            for k, v in model_checkpoint["state_dict1"].items()
+        }
+    )
+    model2.load_state_dict(
+        {
+            k.replace("module.", ""): v
+            for k, v in model_checkpoint["state_dict2"].items()
+        }
+    )
+    logger.info(f"\n{model1}\n")
+    tester = Tester(
+        config=config,
+        test_loader=test_loader,
+        model1=model1.eval().cuda(),
+        model2=model2.eval().cuda(),
+        is_2d=is_2d,
+        save_dir=save_dir,
+        model_name=model_name,
+    )
     tester.test()
 
 
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     _, config = parse_option()
     main(config)
