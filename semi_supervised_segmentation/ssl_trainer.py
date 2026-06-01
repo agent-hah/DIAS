@@ -25,6 +25,8 @@ class SSL_Trainer(Trainer):
         optimizer,
         lr_scheduler,
         tag,
+        start_epoch=1,
+        mnt_best=None,
     ):
         self.config = config
         self.scaler: torch.GradScaler = torch.amp.GradScaler("cuda", enabled=True)
@@ -37,16 +39,22 @@ class SSL_Trainer(Trainer):
         self.lr_scheduler = lr_scheduler
         self.num_steps = len(self.train_loader)
         self.tag = tag
+        self.start_epoch = start_epoch
         if self._get_rank() == 0:
             self.checkpoint_dir = os.path.join(
                 config.SAVE_DIR, config.EXPERIMENT_ID, tag
             )
 
-            os.makedirs(self.checkpoint_dir)
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
         # MONITORING
         self.improved = True
         self.not_improved_count = 0
-        self.mnt_best = -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+        if mnt_best is not None:
+            self.mnt_best = mnt_best
+        else:
+            self.mnt_best = (
+                -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+            )
 
     def _train_epoch(self, epoch):
         wrt_mode = self.tag + "_train"

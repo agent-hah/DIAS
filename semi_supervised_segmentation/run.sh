@@ -44,12 +44,13 @@ run_experiment() {
 }
 
 # --- LABELED DATA: 1 SEQUENCE ---
-run_experiment 1 30 true
-run_experiment 1 60 false
-run_experiment 1 60 true
+# run_experiment 1 30 true
+# run_experiment 1 60 false
+# run_experiment 1 60 true
 
 # --- LABELED DATA: 3 SEQUENCES ---
-run_experiment 3 30 true
+python semi_supervised_segmentation/ssl_train.py -nl 3 -nu 30 --SDA --opts SAVE_DIR "$BASE_DIR/3_30_SDA" --resume "$BASE_DIR/3_30_SDA/FR_UNet_260530_162356/ite_3_student" --start_ite 3 --start_phase student
+# run_experiment 3 30 true
 run_experiment 3 60 false
 run_experiment 3 60 true
 

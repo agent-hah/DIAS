@@ -71,6 +71,19 @@ def parse_option():
         required=False,
         action="store_true",
     )
+    parser.add_argument(
+        "--resume", type=str, default="", help="Path to checkpoint folder"
+    )
+    parser.add_argument(
+        "--start_ite", type=int, default=1, help="Iteration to resume from"
+    )
+    parser.add_argument(
+        "--start_phase",
+        type=str,
+        choices=["teacher", "student"],
+        default="teacher",
+        help="Phase to resume",
+    )
     args = parser.parse_args()
     config = get_config(args)
 
@@ -122,9 +135,17 @@ def main_worker(local_rank, config):
     )
     if local_rank == 0:
         config.defrost()
-        config.EXPERIMENT_ID = (
-            f"{config.WANDB.TAG}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
-        )
+
+        if config.TRAIN.RESUME_PATH:
+            # Gets the name of the parent folder (e.g., "FR_UNet_231005_120000")
+            config.EXPERIMENT_ID = os.path.basename(
+                os.path.dirname(os.path.normpath(config.TRAIN.RESUME_PATH))
+            )
+        else:
+            config.EXPERIMENT_ID = (
+                f"{config.WANDB.TAG}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
+            )
+
         config.freeze()
         wandb.init(
             project=config.WANDB.PROJECT,
@@ -133,44 +154,32 @@ def main_worker(local_rank, config):
             mode=config.WANDB.MODE,
         )
 
-    tag = "ite_1_teacher"
-    train_label_loader = build_train_single_loader(config)
-    val_loader = build_val_loader(config)
-    trainer = SSL_Trainer(
-        config=config,
-        train_loader=train_label_loader,
-        val_loader=val_loader,
-        model=model.cuda(),
-        is_2d=is_2d,
-        loss=loss,
-        optimizer=optimizer,
-        lr_scheduler=lr_scheduler,
-        tag=tag,
-    )
-    checkpoint_dir = trainer.train()
-    # checkpoint_dir = "/ai/code/DIAS/semi_supervised_segmentation/save_pth/VSS_Net_1_30_231107_093851/ite_1_teacher"
-    for i in range(1, config.ITE + 1):
-        # save_dir = "pseudo_label/VSS_Net_1_30_231107_093851/ite_1_teacher"
-        save_dir = "pseudo_label" + "/" + config.EXPERIMENT_ID + "/" + tag
-        test_loader = build_inference_loader(config)
-        model_checkpoint = load_checkpoint(checkpoint_dir, False)
-        model.load_state_dict(
-            {
-                k.replace("module.", ""): v
-                for k, v in model_checkpoint["state_dict"].items()
-            }
-        )
-        predict = Inference(
-            config=config,
-            test_loader=test_loader,
-            model=model.eval().cuda(),
-            is_2d=is_2d,
-            save_dir=save_dir,
-        )
-        predict.predict()
+        # --- RESUME LOGIC SETUP ---
+    start_epoch = 1
+    mnt_best = None
+    checkpoint_dir = ""
 
-        tag = f"ite_{i}_student"
-        train_label_loader = build_train_all_loader(config, save_dir)
+    if config.TRAIN.RESUME_PATH:
+        logger.info(f"Resuming training from {config.TRAIN.RESUME_PATH}...")
+        checkpoint = load_checkpoint(config.TRAIN.RESUME_PATH, is_best=False)
+        model.load_state_dict(checkpoint["state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.cuda()
+
+        start_epoch = checkpoint["epoch"] + 1
+        if "monitor_best" in checkpoint:
+            mnt_best = checkpoint["monitor_best"]
+        checkpoint_dir = config.TRAIN.RESUME_PATH
+    # --------------------------
+
+    # Phase 1: TEACHER
+    if config.TRAIN.START_ITE == 1 and config.TRAIN.START_PHASE == "teacher":
+        tag = "ite_1_teacher"
+        train_label_loader = build_train_single_loader(config)
         val_loader = build_val_loader(config)
         trainer = SSL_Trainer(
             config=config,
@@ -182,8 +191,82 @@ def main_worker(local_rank, config):
             optimizer=optimizer,
             lr_scheduler=lr_scheduler,
             tag=tag,
+            start_epoch=start_epoch,  # <-- Passed in
+            mnt_best=mnt_best,
+        )  # <-- Passed in
+        checkpoint_dir = trainer.train()
+
+        # Reset epoch trackers so subsequent loops start at epoch 1
+        start_epoch = 1
+        mnt_best = None
+
+    # Phase 2: ITERATIONS (Pseudo-labeling & Student)
+    for i in range(config.TRAIN.START_ITE, config.ITE + 1):
+        # If we are resuming directly into a student phase, skip teacher/previous pseudo labels
+        if i == config.TRAIN.START_ITE and config.TRAIN.START_PHASE == "student":
+            logger.info(f"Resuming directly into Iteration {i} Student phase.")
+            tag = f"ite_{i}_student"
+            # It will use the provided config.TRAIN.RESUME_PATH as checkpoint_dir
+        else:
+            # Generate pseudo labels using the latest checkpoint_dir
+            logger.info(f"Generating Pseudo Labels for Iteration {i}")
+            # If we resumed a teacher, tag might still be "ite_1_teacher" here, which is correct for finding the folder.
+            if "tag" not in locals():
+                tag = f"ite_{i - 1}_student" if i > 1 else "ite_1_teacher"
+
+            save_dir = os.path.join(
+                config.SAVE_DIR, "pseudo_label", config.EXPERIMENT_ID, tag
+            )
+
+            test_loader = build_inference_loader(config)
+            model_checkpoint = load_checkpoint(checkpoint_dir, False)
+            model.load_state_dict(
+                {
+                    k.replace("module.", ""): v
+                    for k, v in model_checkpoint["state_dict"].items()
+                }
+            )
+
+            predict = Inference(
+                config=config,
+                test_loader=test_loader,
+                model=model.eval().cuda(),
+                is_2d=is_2d,
+                save_dir=save_dir,
+            )
+            predict.predict()
+
+        # Train Student
+        tag = f"ite_{i}_student"
+
+        # Determine where pseudo labels are saved
+        lbl_dir = os.path.join(
+            config.SAVE_DIR,
+            "pseudo_label",
+            config.EXPERIMENT_ID,
+            f"ite_{i - 1}_student" if i > 1 else "ite_1_teacher",
+        )
+
+        train_label_loader = build_train_all_loader(config, lbl_dir)
+        val_loader = build_val_loader(config)
+        trainer = SSL_Trainer(
+            config=config,
+            train_loader=train_label_loader,
+            val_loader=val_loader,
+            model=model.cuda(),
+            is_2d=is_2d,
+            loss=loss,
+            optimizer=optimizer,
+            lr_scheduler=lr_scheduler,
+            tag=tag,
+            start_epoch=start_epoch,  # Will be >1 if resuming student, else 1
+            mnt_best=mnt_best,
         )
         checkpoint_dir = trainer.train()
+
+        # Reset for the next iteration
+        start_epoch = 1
+        mnt_best = None
 
 
 if __name__ == "__main__":

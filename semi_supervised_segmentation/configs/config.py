@@ -54,6 +54,9 @@ _C.TRAIN.SAVE_PERIOD = 1
 _C.TRAIN.MNT_MODE = "max"
 _C.TRAIN.MNT_METRIC = "AUC"
 _C.TRAIN.EARLY_STOPPING = 100
+_C.TRAIN.RESUME_PATH = ""
+_C.TRAIN.START_ITE = 1
+_C.TRAIN.START_PHASE = "teacher"
 
 _C.TRAIN.EPOCHS = 100
 _C.TRAIN.WEIGHT_DECAY = 0.01
@@ -127,6 +130,12 @@ def update_config(config, args):
         config.DIS = True
     if hasattr(args, "SDA") and args.SDA:
         config.DATASET.USE_SDA = True
+    if hasattr(args, "resume") and args.resume:
+        config.TRAIN.RESUME_PATH = args.resume
+    if hasattr(args, "start_ite") and args.start_ite:
+        config.TRAIN.START_ITE = args.start_ite
+    if hasattr(args, "start_phase") and args.start_phase:
+        config.TRAIN.START_PHASE = args.start_phase
     config.freeze()
 
 
