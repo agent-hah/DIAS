@@ -11,7 +11,7 @@ import math
 import torch
 from loguru import logger
 from tqdm import tqdm
-from utils.helpers import to_cuda
+from utils.helpers import to_cuda, load_checkpoint
 from utils.metrics import AverageMeter, get_metrics
 import wandb
 import torch.distributed as dist
@@ -38,7 +38,16 @@ from torch.nn.modules.loss import CrossEntropyLoss, MSELoss
 
 class Trainer:
     def __init__(
-        self, config, is_2d, train_loader, val_loader, model, optimizer, lr_scheduler
+        self,
+        config,
+        is_2d,
+        train_loader,
+        val_loader,
+        model,
+        optimizer,
+        lr_scheduler,
+        start_epoch=1,
+        mnt_best=None,
     ):
         self.config = config
 
@@ -49,16 +58,22 @@ class Trainer:
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
         self.is_2d = is_2d
+        self.start_epoch = start_epoch
 
         self.num_steps = len(self.train_loader)
         if self._get_rank() == 0:
             self.checkpoint_dir = os.path.join(config.SAVE_DIR, config.EXPERIMENT_ID)
 
-            os.makedirs(self.checkpoint_dir)
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
         # MONITORING
         self.improved = True
         self.not_improved_count = 0
-        self.mnt_best = -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+        if mnt_best is not None:
+            self.mnt_best = mnt_best
+        else:
+            self.mnt_best = (
+                -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+            )
         self.pce_loss = CrossEntropyLoss(ignore_index=255)
         self.ce_loss = CrossEntropyLoss()
         self.con_loss = MSELoss()
@@ -68,7 +83,7 @@ class Trainer:
 
     def train(self):
 
-        for epoch in range(1, self.config.TRAIN.EPOCHS + 1):
+        for epoch in range(self.start_epoch, self.config.TRAIN.EPOCHS + 1):
             if self.config.DIS:
                 self.train_loader.sampler.set_epoch(epoch)
 
@@ -354,6 +369,13 @@ def parse_option():
         help="process number for DDP",
     )
 
+    parser.add_argument(
+        "--resume",
+        type=str,
+        default="",
+        help="Path to the checkpoint folder to resume training from",
+    )
+
     args = parser.parse_args()
     config = get_config(args)
 
@@ -374,7 +396,12 @@ def main(config):
 def main_worker(local_rank, config):
     if local_rank == 0:
         config.defrost()
-        config.EXPERIMENT_ID = f"{config.SCRIBBLE_TYPE}_{config.WANDB.TAG}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
+        if config.TRAIN.RESUME_PATH:
+            config.EXPERIMENT_ID = os.path.basename(
+                os.path.normpath(config.TRAIN.RESUME_PATH)
+            )
+        else:
+            config.EXPERIMENT_ID = f"{config.SCRIBBLE_TYPE}_{config.WANDB.TAG}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
         config.freeze()
         wandb.init(
             project=config.WANDB.PROJECT,
@@ -407,6 +434,23 @@ def main_worker(local_rank, config):
     optimizer = build_optimizer(config, model)
     lr_scheduler = build_scheduler(config, optimizer, len(train_loader))
 
+    if config.TRAIN.RESUME_PATH:
+        logger.info(f"Resuming training from {config.TRAIN.RESUME_PATH}...")
+        checkpoint = load_checkpoint(config.TRAIN.RESUME_PATH, is_best=False)
+
+        model.load_state_dict(checkpoint["state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+
+        # Fix the CPU/GPU optimizer device mismatch
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.cuda()
+
+        start_epoch = checkpoint["epoch"] + 1
+        if "monitor_best" in checkpoint:
+            mnt_best = checkpoint["monitor_best"]
+
     trainer = Trainer(
         config=config,
         train_loader=train_loader,
@@ -415,6 +459,8 @@ def main_worker(local_rank, config):
         is_2d=is_2d,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
+        start_epoch=start_epoch,
+        mnt_best=mnt_best,
     )
     trainer.train()
 

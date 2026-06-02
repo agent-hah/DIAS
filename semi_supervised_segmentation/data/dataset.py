@@ -278,7 +278,17 @@ class inference_dataset(test_dataset):
     def read_image(self, images_path):  # type: ignore
         num_files = list(sorted(os.listdir(images_path)))
         images = []
-        for i in range(len(num_files) // 8):
+
+        unique_sequences = set()
+        for f in num_files:
+            if f.startswith("image_s") and "_i" in f:
+                # extract the sequence ID
+                seq_num = f.split("_")[1][1:]
+                unique_sequences.add(seq_num)
+
+        total_sequences = len(unique_sequences)
+
+        for i in range(total_sequences):
             if images_path.endswith("/validation/images"):
                 i = i + 30
             elif images_path.endswith("/test/images"):

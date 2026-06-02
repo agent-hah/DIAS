@@ -54,6 +54,7 @@ _C.TRAIN.SAVE_PERIOD = 1
 _C.TRAIN.MNT_MODE = "max"
 _C.TRAIN.MNT_METRIC = "AUC"
 _C.TRAIN.EARLY_STOPPING = 100
+_C.TRAIN.RESUME_PATH = ""
 
 _C.TRAIN.PSEUDO_LOSS_WIGHT = 0.2
 _C.TRAIN.CONSISTENCY_LOSS_WIGHT = 0.2
@@ -127,6 +128,8 @@ def update_config_PLC(config, args):
         config.TRAIN.PSEUDO_LOSS_WIGHT = args.pseudo_loss_weight
     if args.consistency_loss_weight:
         config.TRAIN.CONSISTENCY_LOSS_WIGHT = args.consistency_loss_weight
+    if hasattr(args, "resume") and args.resume:
+        config.RESUME_PATH = args.resume
     config.freeze()
 
 
@@ -155,6 +158,8 @@ def update_config(config, args):
         config.DIS = True
     if args.scribble_type:
         config.SCRIBBLE_TYPE = args.scribble_type
+    if hasattr(args, "resume") and args.resume:
+        config.RESUME_PATH = args.resume
     config.freeze()
 
 

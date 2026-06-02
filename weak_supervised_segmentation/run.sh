@@ -43,7 +43,7 @@ run_experiment() {
   echo "========================================================="
 
   # Run the script from the root directory, passing the scribble type and custom save path
-  python "weak_supervised_segmentation/$script_name" -st "$scribble_type" --opts SAVE_DIR "$save_path"
+  python "weak_supervised_segmentation/$script_name" -mt UNet -st "$scribble_type" --opts SAVE_DIR "$save_path"
 
   # Capture the exit code of the python command
   local exit_code=$?

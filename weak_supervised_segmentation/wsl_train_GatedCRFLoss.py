@@ -16,7 +16,7 @@ import torch.distributed as dist
 import argparse
 from loguru import logger
 from data import build_train_loader
-from utils.helpers import seed_torch
+from utils.helpers import seed_torch, load_checkpoint
 from losses.losses import *
 from datetime import datetime
 import wandb
@@ -34,7 +34,16 @@ from losses.gate_crf_loss import ModelLossSemsegGatedCRF
 
 class Trainer:
     def __init__(
-        self, config, train_loader, val_loader, model, is_2d, optimizer, lr_scheduler
+        self,
+        config,
+        train_loader,
+        val_loader,
+        model,
+        is_2d,
+        optimizer,
+        lr_scheduler,
+        start_epoch=1,
+        mnt_best=None,
     ):
         self.config = config
 
@@ -45,15 +54,21 @@ class Trainer:
         self.val_loader = val_loader
         self.optimizer = optimizer
         self.lr_scheduler = lr_scheduler
+        self.start_epoch = start_epoch
         self.num_steps = len(self.train_loader)
         if self._get_rank() == 0:
             self.checkpoint_dir = os.path.join(config.SAVE_DIR, config.EXPERIMENT_ID)
 
-            os.makedirs(self.checkpoint_dir)
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
         # MONITORING
         self.improved = True
         self.not_improved_count = 0
-        self.mnt_best = -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+        if mnt_best is not None:
+            self.mnt_best = mnt_best
+        else:
+            self.mnt_best = (
+                -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+            )
         self.loss = DC_and_CE_loss({}, {}, ignore_label=255)
         self.gatecrf_loss = ModelLossSemsegGatedCRF()
         self.loss_gatedcrf_kernels_desc = [{"weight": 0.1, "xy": 6}]
@@ -61,7 +76,7 @@ class Trainer:
 
     def train(self):
 
-        for epoch in range(1, self.config.TRAIN.EPOCHS + 1):
+        for epoch in range(self.start_epoch, self.config.TRAIN.EPOCHS + 1):
             if self.config.DIS:
                 self.train_loader.sampler.set_epoch(epoch)
 
@@ -311,6 +326,7 @@ def parse_option():
         action="store_true",
     )
     parser.add_argument("-ws", "--world_size", type=int, help="process number for DDP")
+    parser.add_argument("--resume", type=str, help="path to resume checkpoint")
     args = parser.parse_args()
     config = get_config(args)
 
@@ -331,7 +347,12 @@ def main(config):
 def main_worker(local_rank, config):
     if local_rank == 0:
         config.defrost()
-        config.EXPERIMENT_ID = f"{config.WANDB.TAG}_{config.SCRIBBLE_TYPE}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
+        if config.TRAIN.RESUME_PATH:
+            config.EXPERIMENT_ID = os.path.basename(
+                os.path.normpath(config.TRAIN.RESUME_PATH)
+            )
+        else:
+            config.EXPERIMENT_ID = f"{config.WANDB.TAG}_{config.SCRIBBLE_TYPE}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
         config.freeze()
         wandb.init(
             project=config.WANDB.PROJECT,
@@ -360,6 +381,27 @@ def main_worker(local_rank, config):
 
     optimizer = build_optimizer(config, model)
     lr_scheduler = build_scheduler(config, optimizer, len(train_loader))
+
+    start_epoch = 1
+    mnt_best = None
+
+    if config.TRAIN.RESUME_PATH:
+        logger.info(f"Resuming training from {config.TRAIN.RESUME_PATH}...")
+        checkpoint = load_checkpoint(config.TRAIN.RESUME_PATH, is_best=False)
+
+        model.load_state_dict(checkpoint["state_dict"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+
+        # Fix the CPU/GPU optimizer device mismatch
+        for state in optimizer.state.values():
+            for k, v in state.items():
+                if isinstance(v, torch.Tensor):
+                    state[k] = v.cuda()
+
+        start_epoch = checkpoint["epoch"] + 1
+        if "monitor_best" in checkpoint:
+            mnt_best = checkpoint["monitor_best"]
+
     trainer = Trainer(
         config=config,
         train_loader=train_loader,
@@ -368,6 +410,8 @@ def main_worker(local_rank, config):
         is_2d=is_2d,
         optimizer=optimizer,
         lr_scheduler=lr_scheduler,
+        start_epoch=start_epoch,
+        mnt_best=mnt_best,
     )
     trainer.train()
 

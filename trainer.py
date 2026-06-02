@@ -130,7 +130,13 @@ class Trainer:
             self.optimizer.zero_grad()
             with torch.amp.autocast("cuda", enabled=self.config.AMP):
                 pre = self.model(img)
-                loss = self.loss(pre, gt)
+
+            pre_float = pre.float()
+            gt_float = gt.float()
+
+            with torch.amp.autocast("cuda", enabled=False):
+                loss = self.loss(pre_float, gt_float)
+
             if self.config.AMP:
                 self.scaler.scale(loss).backward()
                 if self.config.TRAIN.DO_BACKPROP:
@@ -146,7 +152,7 @@ class Trainer:
             self.batch_time.update(time.time() - tic)
             self._update_metrics(
                 **get_metrics(
-                    torch.softmax(pre, dim=1).cpu().detach().numpy()[:, 1, :, :],
+                    torch.softmax(pre_float, dim=1).cpu().detach().numpy()[:, 1, :, :],
                     gt.cpu().detach().numpy().squeeze(axis=1),
                 )
             )
@@ -188,27 +194,36 @@ class Trainer:
                 if not self.is_2d:
                     img = img.unsqueeze(1)
 
+                # 1. Run only the model forward pass in AMP
                 with torch.amp.autocast("cuda", enabled=self.config.AMP):
                     predict = self.model(img)
 
-                    # Match gt dimensions to model output (pre) instead of input (img)
-                    if gt.dim() == predict.dim() - 1:
-                        gt = gt.unsqueeze(1)
-                    elif gt.dim() > predict.dim() and gt.size(1) == 1:
-                        gt = gt.squeeze(1)
+                # 2. Match gt dimensions and cast to FP32
+                if gt.dim() == predict.dim() - 1:
+                    gt = gt.unsqueeze(1)
+                elif gt.dim() > predict.dim() and gt.size(1) == 1:
+                    gt = gt.squeeze(1)
 
-                    loss = self.loss(predict, gt)
+                predict_float = predict.float()
+                gt_float = gt.float()
+
+                # 3. Disable AMP for loss
+                with torch.amp.autocast("cuda", enabled=False):
+                    loss = self.loss(predict_float, gt_float)
 
                 self.total_loss.update(loss.item())
+
+                # 4. Calculate metrics in FP32
                 self._update_metrics(
                     **get_metrics(
-                        torch.softmax(predict, dim=1)
+                        torch.softmax(predict_float, dim=1)
                         .cpu()
                         .detach()
                         .numpy()[:, 1, :, :],
                         gt.cpu().detach().numpy().squeeze(axis=1),
                     )
                 )
+
                 tbar.set_description(
                     "EVAL ({})  | Loss: {:.4f} |DSC {:.4f}  Acc {:.4f}  Sen {:.4f} Spe {:.4f}  IOU {:.4f} AUC {:.4f} |".format(
                         epoch, self.total_loss.mean, *self._get_metrics_mean().values()

@@ -9,7 +9,7 @@ import math
 import torch
 from loguru import logger
 from tqdm import tqdm
-from utils.helpers import to_cuda, target_device
+from utils.helpers import to_cuda, target_device, load_checkpoint
 from utils.metrics import AverageMeter, get_metrics
 import wandb
 import torch.distributed as dist
@@ -46,6 +46,8 @@ class Trainer:
         optimizer2,
         lr_scheduler1,
         lr_scheduler2,
+        start_epoch=1,
+        mnt_best=None,
     ):
         self.config = config
         self.device = target_device
@@ -59,16 +61,22 @@ class Trainer:
         self.optimizer2 = optimizer2
         self.lr_scheduler1 = lr_scheduler1
         self.lr_scheduler2 = lr_scheduler2
+        self.start_epoch = start_epoch
 
         self.num_steps = len(self.train_loader)
         if self._get_rank() == 0:
             self.checkpoint_dir = os.path.join(config.SAVE_DIR, config.EXPERIMENT_ID)
 
-            os.makedirs(self.checkpoint_dir)
+            os.makedirs(self.checkpoint_dir, exist_ok=True)
         # MONITORING
         self.improved = True
         self.not_improved_count = 0
-        self.mnt_best = -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+        if mnt_best is not None:
+            self.mnt_best = mnt_best
+        else:
+            self.mnt_best = (
+                -math.inf if self.config.TRAIN.MNT_MODE == "max" else math.inf
+            )
         self.pce_loss = CrossEntropyLoss(ignore_index=255).to(self.device)
         self.ce_loss = CrossEntropyLoss().to(self.device)
         self.con_loss = MSELoss().to(self.device)
@@ -77,7 +85,7 @@ class Trainer:
 
     def train(self):
 
-        for epoch in range(1, self.config.TRAIN.EPOCHS + 1):
+        for epoch in range(self.start_epoch, self.config.TRAIN.EPOCHS + 1):
             if self.config.DIS:
                 self.train_loader.sampler.set_epoch(epoch)
 
@@ -405,6 +413,7 @@ def parse_option():
         default=0.5,
         help="process number for DDP",
     )
+    parser.add_argument("--resume", type=str, help="path to resume checkpoint")
 
     args = parser.parse_args()
     config = get_config_PLC(args)
@@ -426,7 +435,12 @@ def main(config):
 def main_worker(local_rank, config):
     if local_rank == 0:
         config.defrost()
-        config.EXPERIMENT_ID = f"{config.WANDB.TAG}_{config.SCRIBBLE_TYPE}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
+        if config.TRAIN.RESUME_PATH:
+            config.EXPERIMENT_ID = os.path.basename(
+                os.path.normpath(config.TRAIN.RESUME_PATH)
+            )
+        else:
+            config.EXPERIMENT_ID = f"{config.WANDB.TAG}_{config.SCRIBBLE_TYPE}_{datetime.now().strftime('%y%m%d_%H%M%S')}"
         config.freeze()
         wandb.init(
             project=config.WANDB.PROJECT,
@@ -479,6 +493,32 @@ def main_worker(local_rank, config):
     lr_scheduler1 = build_scheduler(config, optimizer1, len(train_loader))
     lr_scheduler2 = build_scheduler(config, optimizer2, len(train_loader))
 
+    start_epoch = 1
+    mnt_best = None
+
+    if config.TRAIN.RESUME_PATH:
+        logger.info(f"Resuming training from {config.TRAIN.RESUME_PATH}...")
+        checkpoint = load_checkpoint(config.TRAIN.RESUME_PATH, is_best=False)
+
+        # Load Both Models
+        model1.load_state_dict(checkpoint["state_dict1"])
+        model2.load_state_dict(checkpoint["state_dict2"])
+
+        # Load Both Optimizers
+        optimizer1.load_state_dict(checkpoint["optimizer1"])
+        optimizer2.load_state_dict(checkpoint["optimizer2"])
+
+        # Fix the CPU/GPU mismatch for BOTH optimizers
+        for opt in [optimizer1, optimizer2]:
+            for state in opt.state.values():
+                for k, v in state.items():
+                    if isinstance(v, torch.Tensor):
+                        state[k] = v.cuda()
+
+        start_epoch = checkpoint["epoch"] + 1
+        if "monitor_best" in checkpoint:
+            mnt_best = checkpoint["monitor_best"]
+
     trainer = Trainer(
         config=config,
         train_loader=train_loader,
@@ -490,6 +530,8 @@ def main_worker(local_rank, config):
         optimizer2=optimizer2,
         lr_scheduler1=lr_scheduler1,
         lr_scheduler2=lr_scheduler2,
+        start_epoch=start_epoch,
+        mnt_best=mnt_best,
     )
     trainer.train()
 
@@ -500,4 +542,3 @@ if __name__ == "__main__":
     _, config = parse_option()
 
     main(config)
-
