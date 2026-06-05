@@ -6,13 +6,15 @@ BASE_DIR="$HOME/projects/lab/saved_models/weakly_supervised"
 # Array to keep track of failed experiments
 FAILED_EXPERIMENTS=()
 
+# python weak_supervised_segmentation/wsl_train_sscr.py -mt UNet -st "SALE" --opts SAVE_DIR "" --resume "$BASE_DIR/SALE/wsl_train_sscr/UNet_SALE_260604_173752"
+
 # List of all the weakly supervised training scripts
 TRAIN_SCRIPTS=(
-  "wsl_train_pcedice.py"
-  "wsl_train_entropy_mini.py"
-  "wsl_train_GatedCRFLoss.py"
-  "wsl_train_Inter&Intra_Class.py"
-  "wsl_train_DMPLS.py"
+  # "wsl_train_pcedice.py"
+  # "wsl_train_entropy_mini.py"
+  # "wsl_train_GatedCRFLoss.py"
+  # "wsl_train_Inter&Intra_Class.py"
+  # "wsl_train_DMPLS.py"
   "wsl_train_sscr.py"
   "wsl_train_EMA_sscr.py"
   "wsl_train_sscr_ablation.py"
@@ -20,7 +22,7 @@ TRAIN_SCRIPTS=(
 
 # List of scribble types to evaluate
 SCRIBBLE_TYPES=(
-  "RDFA"
+  # "RDFA"
   "SALE"
 )
 
@@ -44,10 +46,8 @@ run_experiment() {
 
   # Run the script from the root directory, passing the scribble type and custom save path
   python "weak_supervised_segmentation/$script_name" -mt UNet -st "$scribble_type" --opts SAVE_DIR "$save_path"
-
   # Capture the exit code of the python command
   local exit_code=$?
-
   # Check if the command failed (a non-zero exit code indicates an error)
   if [ $exit_code -ne 0 ]; then
     echo ""

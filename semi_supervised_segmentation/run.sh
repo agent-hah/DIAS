@@ -51,13 +51,14 @@ run_experiment() {
 # --- LABELED DATA: 3 SEQUENCES ---
 # run_experiment 3 30 true
 # run_experiment 3 60 false
-python semi_supervised_segmentation/ssl_train.py -nl 3 -nu 60 --opts SAVE_DIR "$BASE_DIR/3_60" --resume "$BASE_DIR/3_60/FR_UNet_260601_161037/ite_1_student" --start_ite 1 --start_phase student
-run_experiment 3 60 true
+# python semi_supervised_segmentation/ssl_train.py -nl 3 -nu 60 --opts SAVE_DIR "$BASE_DIR/3_60" --resume "$BASE_DIR/3_60/FR_UNet_260601_161037/ite_1_student" --start_ite 1 --start_phase student
+# run_experiment 3 60 true
 
 # --- LABELED DATA: 10 SEQUENCES ---
 # run_experiment 10 30 true
-run_experiment 10 60 false
-run_experiment 10 60 true
+# run_experiment 10 60 false
+# run_experiment 10 60 true
+python semi_supervised_segmentation/ssl_train.py -nl 10 -nu 60 --SDA --opts SAVE_DIR "$BASE_DIR/10_60_SDA" --resume "$BASE_DIR/10_60_SDA/FR_UNet_260602_190000/ite_1_student" --start_ite 1 --start_phase student
 
 echo ""
 echo "========================================================="
