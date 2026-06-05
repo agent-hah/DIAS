@@ -8,9 +8,14 @@
 # ---> Define your single output directory for all CSV results here <---
 FINAL_CSV_DIR="/content/drive/MyDrive/DIAS_Project/results"
 
+BASE_DIR="~/projects/lab/saved_models/"
+FSL_BASE_DIR="$BASE_DIR/fully_supervised"
+SSL_BASE_DIR="$BASE_DIR/semi_supervised"
+WSL_BASE_DIR="$BASE_DIR/weakly_supervised"
+
 # Fully-Supervised Model
-FSL_VSS_NET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/VSS_Net/VSS_Net_NN_260522_162423"
-FSL_ATT_UNET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/Att_UNet/Att_UNet_NN_260522_170758"
+FSL_VSS_NET_CKPT="$FSL_BASE_DIR/VSS_Net/VSS_Net_NN_260527_210416"
+FSL_ATT_UNET_CKPT="$FSL_BASE_DIR/Att_UNet/Att_UNet_NN_260527_222210"
 FSL_CSNET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/CSNet/CSNet_NN_260522_173125"
 FSL_UNET_NESTED_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/UNet_Nested/UNet_Nested_NN_260522_175415"
 FSL_RES_UNET_CKPT="/content/drive/MyDrive/DIAS_Project/saved_models/Res_UNet/Res_UNet_NN_260522_181835"
@@ -112,4 +117,3 @@ echo "---------------------------------------------------"
 #
 # echo "All evaluations complete!"
 # echo "Your consolidated CSV results have been saved to: $FINAL_CSV_DIR"
-
