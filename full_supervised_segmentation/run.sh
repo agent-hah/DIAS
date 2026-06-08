@@ -11,9 +11,9 @@
 # python full_supervised_segmentation/fsl_train.py -mt UNet_Nested_3D --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/UNet_Nested_3D"
 # python full_supervised_segmentation/fsl_train.py -mt PSC --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/PSC"
 # python full_supervised_segmentation/fsl_train.py -mt SVS_Net --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/SVS_Net" --resume "/home/ashmithandoo/projects/lab/saved_models/fully_supervised/SVS_Net/SVS_Net_NN_260528_230109"
-python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/IPN"
+python full_supervised_segmentation/fsl_train.py -mt IPN --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/IPN" AMP False
 # python full_supervised_segmentation/fsl_train.py -mt UNet --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/UNet"
-python full_supervised_segmentation/fsl_train.py -mt MAA_Net --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/MAA_Net"
+python full_supervised_segmentation/fsl_train.py -mt MAA_Net --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/MAA_Net" AMP False
 # python full_supervised_segmentation/fsl_train.py -mt FR_UNet --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/FR_UNet"
 # python full_supervised_segmentation/fsl_train.py -mt ST_UNet --tag NN -wm offline --opts SAVE_DIR "$HOME/projects/lab/saved_models/fully_supervised/ST_UNet"
 

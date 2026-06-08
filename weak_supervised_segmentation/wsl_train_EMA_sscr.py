@@ -434,6 +434,9 @@ def main_worker(local_rank, config):
     optimizer = build_optimizer(config, model)
     lr_scheduler = build_scheduler(config, optimizer, len(train_loader))
 
+    start_epoch = 1
+    mnt_best = None
+
     if config.TRAIN.RESUME_PATH:
         logger.info(f"Resuming training from {config.TRAIN.RESUME_PATH}...")
         checkpoint = load_checkpoint(config.TRAIN.RESUME_PATH, is_best=False)

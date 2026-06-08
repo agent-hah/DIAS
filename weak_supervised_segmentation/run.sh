@@ -14,15 +14,15 @@ TRAIN_SCRIPTS=(
   # "wsl_train_entropy_mini.py"
   # "wsl_train_GatedCRFLoss.py"
   # "wsl_train_Inter&Intra_Class.py"
-  # "wsl_train_DMPLS.py"
-  "wsl_train_sscr.py"
-  "wsl_train_EMA_sscr.py"
-  "wsl_train_sscr_ablation.py"
+  "wsl_train_DMPLS.py"
+  # "wsl_train_sscr.py"
+  # "wsl_train_EMA_sscr.py"
+  # "wsl_train_sscr_ablation.py"
 )
 
 # List of scribble types to evaluate
 SCRIBBLE_TYPES=(
-  # "RDFA"
+  "RDFA"
   "SALE"
 )
 
@@ -45,7 +45,7 @@ run_experiment() {
   echo "========================================================="
 
   # Run the script from the root directory, passing the scribble type and custom save path
-  python "weak_supervised_segmentation/$script_name" -mt UNet -st "$scribble_type" --opts SAVE_DIR "$save_path"
+  python "weak_supervised_segmentation/$script_name" -mt UNet_CCT -st "$scribble_type" --opts SAVE_DIR "$save_path"
   # Capture the exit code of the python command
   local exit_code=$?
   # Check if the command failed (a non-zero exit code indicates an error)
