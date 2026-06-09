@@ -55,6 +55,12 @@ def build_wsl_model(config):
                 num_classes=2,
                 num_channels=8
             ), True
+    elif config.MODEL.TYPE == "VSS_Net":
+        return getattr(models, config.MODEL.TYPE)(
+            num_classes=2,
+            num_channels=1,
+            input_reduce=[0, 1, 2, 3, 4, 5, 6, 7],  # full 8-frame sequence
+        ), False
     else:
         return getattr(models, config.MODEL.TYPE)(
             num_classes=3,
